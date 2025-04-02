@@ -19,3 +19,19 @@ gesture_dict = {
     "peace": "Thank you",
     "fist": "Yes",
 }
+
+
+# Function to recognize a sign (You need to train an ML model for better accuracy)
+def recognize_gesture(landmarks):
+    # Placeholder logic: Detect if thumb is up (basic condition)
+    if landmarks[4][1] < landmarks[3][1]:  
+        return "thumbs_up"
+    return "unknown"
+
+# Open webcam
+cap = cv2.VideoCapture(0)
+
+while cap.isOpened():
+    ret, frame = cap.read()
+    if not ret:
+        break
