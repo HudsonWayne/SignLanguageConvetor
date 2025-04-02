@@ -51,3 +51,16 @@ while cap.isOpened():
             if gesture in gesture_dict:
                 text = gesture_dict[gesture]
                 cv2.putText(frame, text, (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                
+                  
+                # Convert text to speech
+                engine.say(text)
+                engine.runAndWait()
+
+    cv2.imshow("Sign Language Recognition", frame)
+    
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
