@@ -35,3 +35,19 @@ while cap.isOpened():
     ret, frame = cap.read()
     if not ret:
         break
+
+# Convert to RGB
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    results = hands.process(rgb_frame)
+
+    if results.multi_hand_landmarks:
+        for hand_landmarks in results.multi_hand_landmarks:
+            mp_draw.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+
+            # Extract landmark positions
+            landmarks = [(lm.x, lm.y) for lm in hand_landmarks.landmark]
+            gesture = recognize_gesture(landmarks)
+
+            if gesture in gesture_dict:
+                text = gesture_dict[gesture]
+                cv2.putText(frame, text, (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
