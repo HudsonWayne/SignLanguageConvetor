@@ -1,17 +1,16 @@
 import cv2
 import mediapipe as mp
 import pyttsx3
-import numpy as np
 
-
+# Initialize Mediapipe Hand Tracking
 mp_hands = mp.solutions.hands
 mp_draw = mp.solutions.drawing_utils
 hands = mp_hands.Hands(min_detection_confidence=0.7)
 
-
+# Initialize Text-to-Speech
 engine = pyttsx3.init()
 
-
+# Define Gesture Dictionary (30+ Gestures)
 gesture_dict = {
     "thumbs_up": "Hello!",
     "thumbs_down": "No",
@@ -25,88 +24,71 @@ gesture_dict = {
     "three_fingers": "Three",
     "four_fingers": "Four",
     "five_fingers": "Five",
+    "call_me": "Call me",
+    "high_five": "High Five",
+    "wave": "Goodbye",
+    "rock_on": "Rock on",
+    "praying_hands": "Please",
+    "heart_sign": "Love",
+    "clap": "Applause",
+    "point_up": "Up",
+    "point_down": "Down",
+    "point_left": "Left",
+    "point_right": "Right",
+    "folded_arms": "Thinking",
+    "writing_gesture": "Write",
+    "reading_gesture": "Read",
+    "rub_hands": "Cold",
+    "snap_fingers": "Magic",
+    "scratch_head": "Confused",
+    "crossed_hands": "Wrong",
+    "hands_on_ears": "Too loud",
+    "hand_covering_mouth": "Surprise",
+    "hands_shrug": "I don't know",
 }
 
 
 def recognize_gesture(landmarks):
-    thumb_tip = landmarks[4][0]
-    index_tip = landmarks[8][0]
-    middle_tip = landmarks[12][0]
-    ring_tip = landmarks[16][0]
-    pinky_tip = landmarks[20][0]
-    
-   
-    if landmarks[4][1] < landmarks[3][1] and landmarks[8][1] > landmarks[6][1]:
+    """
+    Recognize different hand gestures based on finger positions.
+    """
+    thumb_tip = landmarks[4]
+    index_tip = landmarks[8]
+    middle_tip = landmarks[12]
+    ring_tip = landmarks[16]
+    pinky_tip = landmarks[20]
+
+    # Check if fingers are up or down
+    fingers_up = [landmarks[i][1] < landmarks[i - 2][1] for i in [8, 12, 16, 20]]
+
+    # Thumbs Up
+    if landmarks[4][1] < landmarks[3][1] and all(not f for f in fingers_up):
         return "thumbs_up"
     
-    
-    if landmarks[4][1] > landmarks[3][1] and landmarks[8][1] > landmarks[6][1]:
+    # Thumbs Down
+    if landmarks[4][1] > landmarks[3][1] and all(not f for f in fingers_up):
         return "thumbs_down"
-    
-    
-    if landmarks[8][1] < landmarks[6][1] and landmarks[12][1] < landmarks[10][1] and \
-       landmarks[16][1] > landmarks[14][1] and landmarks[20][1] > landmarks[18][1]:
+
+    # Peace Sign (Index & Middle Finger Up)
+    if fingers_up[0] and fingers_up[1] and not fingers_up[2] and not fingers_up[3]:
         return "peace"
-    
-    
-    if all(landmarks[i][1] > landmarks[i - 2][1] for i in [4, 8, 12, 16, 20]):
+
+    # Fist (All Fingers Bent)
+    if all(not f for f in fingers_up) and thumb_tip[1] > landmarks[3][1]:
         return "fist"
-    
-    if all(landmarks[i][1] < landmarks[i - 2][1] for i in [8, 12, 16, 20]):
+
+    # Open Palm (All Fingers Extended)
+    if all(f for f in fingers_up):
         return "open_palm"
-    
-    
-    if abs(thumb_tip - index_tip) < 0.02 and landmarks[12][1] > landmarks[10][1]:
+
+    # OK Sign (Thumb & Index Finger Touching)
+    if abs(thumb_tip[0] - index_tip[0]) < 0.02 and not any(fingers_up[1:]):
         return "ok_sign"
-    
-    
-    fingers_up = sum(1 for i in [8, 12, 16, 20] if landmarks[i][1] < landmarks[i - 2][1])
-    
-    if fingers_up == 1:
-        return "one_finger"
-    elif fingers_up == 2:
-        return "two_fingers"
-    elif fingers_up == 3:
-        return "three_fingers"
-    elif fingers_up == 4:
-        return "four_fingers"
-    elif fingers_up == 5:
-        return "five_fingers"
 
-    return "unknown"
+    # High Five (All Fingers Spread Out)
+    if all(fingers_up) and abs(index_tip[0] - pinky_tip[0]) > 0.1:
+        return "high_five"
 
-
-cap = cv2.VideoCapture(0)
-
-while cap.isOpened():
-    ret, frame = cap.read()
-    if not ret:
-        break
-
-    
-    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    results = hands.process(rgb_frame)
-
-    if results.multi_hand_landmarks:
-        for hand_landmarks in results.multi_hand_landmarks:
-            mp_draw.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
-
-            
-            landmarks = [(lm.x, lm.y) for lm in hand_landmarks.landmark]
-            gesture = recognize_gesture(landmarks)
-
-            if gesture in gesture_dict:
-                text = gesture_dict[gesture]
-                cv2.putText(frame, text, (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                
-                
-                engine.say(text)
-                engine.runAndWait()
-
-    cv2.imshow("Sign Language Recognition", frame)
-    
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-
-cap.release()
-cv2.destroyAllWindows()
+    # "Rock On" Gesture (Index & Pinky Up)
+    if fingers_up[0] and not fingers_up[1] and not fingers_up[2] and fingers_up[3]:
+        return "rock_on"
