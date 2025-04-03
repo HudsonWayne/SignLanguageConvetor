@@ -1,6 +1,6 @@
 import sqlite3
 
-def create_databases():
+def create_database():
     conn = sqlite3.connect('user_data.db')
     cursor = conn.cursor()
     
@@ -27,3 +27,13 @@ def add_employee(name, fingerprint_dat):
 def fetch_employees():
     conn = sqlite3.connect('employees.db')
     cursor = conn.cursor
+    
+    cursor.execute("SELECT * FROM employees")
+    employees = cursor.fetchall()
+    
+    conn.close()
+    return employees
+
+if __name__ == "__main__":
+    create_database()
+    print("Database initialized successfully.")
