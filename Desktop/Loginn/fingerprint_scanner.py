@@ -1,0 +1,2 @@
+from pyfingerprint.pyfingerprint import PyFingerprint
+import database
