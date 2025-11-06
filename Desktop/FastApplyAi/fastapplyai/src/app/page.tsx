@@ -72,16 +72,19 @@ export default function HomePage() {
         <div className="bg-white rounded-xl shadow p-6 text-center hover:shadow-lg">
           <FiUpload className="mx-auto text-4xl text-green-500 mb-2" />
           <h3 className="text-xl font-semibold">Upload CV</h3>
+          <p>Upload your CV and let AI extract your skills automatically</p>
         </div>
 
         <div className="bg-white rounded-xl shadow p-6 text-center hover:shadow-lg">
           <FiSearch className="mx-auto text-4xl text-green-500 mb-2" />
           <h3 className="text-xl font-semibold">Smart Job Matching</h3>
+          <p>Our AI scans multiple platforms to find jobs that match your profile</p>
         </div>
 
         <div className="bg-white rounded-xl shadow p-6 text-center hover:shadow-lg">
           <FiCheckCircle className="mx-auto text-4xl text-green-500 mb-2" />
           <h3 className="text-xl font-semibold">Auto Apply</h3>
+          <p>Automatically apply to relevant positions and track your success</p>
         </div>
       </div>
     </div>
