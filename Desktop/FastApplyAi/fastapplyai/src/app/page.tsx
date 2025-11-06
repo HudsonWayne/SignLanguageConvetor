@@ -19,7 +19,7 @@ export default function HomePage() {
           >
             <FiUser /> Dashboard
           </Link>
-          <Link to="/upload-cv" className="flex items-center gap-1 hover:text-green-600">
+          <Link href="/upload-cv" className="flex items-center gap-1 hover:text-green-600">
             <FiUpload /> Upload CV
           </Link>
           <Link href="/find-jobs" className="flex items-center gap-1 hover:text-green-600">
