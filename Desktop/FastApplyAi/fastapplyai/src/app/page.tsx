@@ -33,9 +33,10 @@ export default function HomePage() {
       {/* NAVBAR */}
       <nav className="
         flex items-center justify-between 
-        px-4 sm:px-6 md:px-10 lg:px-20 
+        px-4 sm:px-6 md:px-10 lg:px-20 xl:px-24 2xl:px-40
         py-4 shadow-md bg-white sticky top-0 z-50 
         backdrop-blur-md bg-opacity-90
+        w-full max-w-[1920px] mx-auto
       ">
         <div className="flex items-center gap-2 text-lg sm:text-xl font-bold transition-all hover:scale-105">
           <div className="bg-green-500 text-white rounded-md px-2 py-1 shadow-sm">
@@ -153,8 +154,9 @@ export default function HomePage() {
       <div className="
         grid 
         grid-cols-1 sm:grid-cols-2 md:grid-cols-3 
-        gap-6 px-6 sm:px-10 md:px-14 lg:px-20 
+        gap-6 px-6 sm:px-10 md:px-14 lg:px-20 xl:px-24 2xl:px-40
         mt-8 sm:mt-10 pb-20
+        w-full max-w-[1920px] mx-auto
       ">
         <div className="bg-white rounded-2xl shadow-lg p-6 text-center transition-all cursor-pointer">
           <FiUpload className="mx-auto text-4xl sm:text-5xl text-green-500 mb-3" />
