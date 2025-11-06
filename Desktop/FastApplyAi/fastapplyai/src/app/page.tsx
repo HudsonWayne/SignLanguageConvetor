@@ -4,7 +4,7 @@ import { FiUpload, FiSearch, FiCheckCircle, FiBell, FiUser } from "react-icons/f
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white text-gray-900">
+    <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white text-gray-900 font-sans">
       {/* NAVBAR */}
       <nav className="flex items-center justify-between px-6 md:px-20 py-4 shadow-sm bg-white sticky top-0 z-50">
         <div className="flex items-center gap-2 text-xl font-bold">
