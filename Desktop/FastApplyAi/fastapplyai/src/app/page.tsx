@@ -33,7 +33,7 @@ export default function HomePage() {
       {/* NAVBAR */}
       <nav className="
         flex items-center justify-between 
-        px-4 sm:px-6 md:px-16 lg:px-20 
+        px-4 sm:px-6 md:px-10 lg:px-20 
         py-4 shadow-md bg-white sticky top-0 z-50 
         backdrop-blur-md bg-opacity-90
       ">
@@ -41,11 +41,11 @@ export default function HomePage() {
           <div className="bg-green-500 text-white rounded-md px-2 py-1 shadow-sm">
             QA
           </div>
-          <span className="tracking-wide">QuickApplyAI</span>
+          <span className="tracking-wide whitespace-nowrap">QuickApplyAI</span>
         </div>
 
         {/* Desktop Menu */}
-        <div className="hidden md:flex items-center gap-6 lg:gap-8 text-sm text-gray-700 font-medium">
+        <div className="hidden md:flex items-center gap-4 lg:gap-8 text-sm text-gray-700 font-medium">
           <Link
             href="/dashboard"
             className="flex items-center gap-1 bg-green-500 text-white px-3 py-2 rounded-md hover:bg-green-600 transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5"
@@ -58,9 +58,7 @@ export default function HomePage() {
           <Link href="/find-jobs" className="flex items-center gap-1 hover:text-green-600 transition-all hover:-translate-y-0.5">
             <FiSearch /> Find Jobs
           </Link>
-          <Link href="/applied" className="hover:text-green-600 transition-all hover:-translate-y-0.5">
-            Applied Jobs
-          </Link>
+          <Link href="/applied" className="hover:text-green-600 transition-all hover:-translate-y-0.5">Applied Jobs</Link>
           <Link href="/notifications" className="flex items-center gap-1 hover:text-green-600 transition-all hover:-translate-y-0.5">
             <FiBell /> Notifications
           </Link>
@@ -104,7 +102,7 @@ export default function HomePage() {
       )}
 
       {/* HERO */}
-      <div className={`text-center mt-16 sm:mt-20 mb-10 px-4 ${isMobile ? "" : "animate-fadeUp"}`}>
+      <div className={`text-center mt-14 sm:mt-20 mb-10 px-4 ${isMobile ? "" : "animate-fadeUp"}`}>
         <div className="flex justify-center">
           <div className="
             bg-green-50 border border-green-300 text-green-600 
@@ -155,7 +153,7 @@ export default function HomePage() {
       <div className="
         grid 
         grid-cols-1 sm:grid-cols-2 md:grid-cols-3 
-        gap-6 px-6 sm:px-10 md:px-16 lg:px-20 
+        gap-6 px-6 sm:px-10 md:px-14 lg:px-20 
         mt-8 sm:mt-10 pb-20
       ">
         <div className="bg-white rounded-2xl shadow-lg p-6 text-center transition-all cursor-pointer">
