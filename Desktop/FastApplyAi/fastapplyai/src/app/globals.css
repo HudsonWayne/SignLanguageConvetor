@@ -78,3 +78,15 @@ body {
 .animation-delay-700 { animation-delay: .7s; }
 .animation-delay-900 { animation-delay: .9s; }
 .animation-delay-1100 { animation-delay: 1.1s; }
+
+
+@keyframes gradientFlow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradientFlow {
+  animation: gradientFlow 8s ease infinite;
+}
+
