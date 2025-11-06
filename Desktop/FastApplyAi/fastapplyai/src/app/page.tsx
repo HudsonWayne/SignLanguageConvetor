@@ -13,10 +13,13 @@ export default function HomePage() {
         </div>
 
         <div className="hidden md:flex items-center gap-8 text-sm text-gray-700">
-          <Link href="/dashboard" className="flex items-center gap-1 hover:text-green-600">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-1 hover:bg-green-600 bg-green-500 text-white px-3 py-2 rounded-md"
+          >
             <FiUser /> Dashboard
           </Link>
-          <Link href="/upload-cv" className="flex items-center gap-1 hover:text-green-600">
+          <Link to="/upload-cv" className="flex items-center gap-1 hover:text-green-600">
             <FiUpload /> Upload CV
           </Link>
           <Link href="/find-jobs" className="flex items-center gap-1 hover:text-green-600">
