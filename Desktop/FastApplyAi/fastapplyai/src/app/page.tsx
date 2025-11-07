@@ -15,7 +15,6 @@ export default function HomePage() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  // detect mobile screen to disable animations
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 640);
@@ -74,6 +73,14 @@ export default function HomePage() {
           >
             <FiBell /> Notifications
           </Link>
+
+          {/* Sign in moved here so it shows properly */}
+          <Link
+            href="/signin"
+            className="bg-green-500 text-white px-4 py-2 rounded-md items-center gap-1 hover:bg-green-600 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-sm"
+          >
+            Sign In
+          </Link>
         </div>
 
         {/* Mobile Hamburger */}
@@ -83,14 +90,6 @@ export default function HomePage() {
         >
           {mobileMenu ? <FiX /> : <FiMenu />}
         </button>
-
-        {/* Sign in (Desktop Only) */}
-        <Link
-          href="/signin"
-          className="hidden md:flex bg-green-500 text-white px-4 py-2 rounded-md items-center gap-1 hover:bg-green-600 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-sm sm:text-base"
-        >
-          Sign In
-        </Link>
       </nav>
 
       {/* Mobile Dropdown */}
