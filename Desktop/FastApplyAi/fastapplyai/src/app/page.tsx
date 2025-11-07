@@ -74,7 +74,6 @@ export default function HomePage() {
             <FiBell /> Notifications
           </Link>
 
-          {/* Sign in moved here so it shows properly */}
           <Link
             href="/signin"
             className="bg-green-500 text-white px-4 py-2 rounded-md items-center gap-1 hover:bg-green-600 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-sm"
