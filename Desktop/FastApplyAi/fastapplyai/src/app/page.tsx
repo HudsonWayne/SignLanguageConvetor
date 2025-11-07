@@ -42,7 +42,7 @@ export default function HomePage() {
         </div>
 
         {/* Desktop Menu */}
-        <div className="hidden md:flex items-center gap-4 lg:gap-8 text-sm text-gray-700 font-medium">
+        <div className="flex items-center gap-4 lg:gap-8 text-sm text-gray-700 font-medium">
           <Link
             href="/dashboard"
             className="flex items-center gap-1 bg-green-500 text-white px-3 py-2 rounded-md hover:bg-green-600 transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5"
@@ -74,6 +74,7 @@ export default function HomePage() {
             <FiBell /> Notifications
           </Link>
 
+          {/* Sign in */}
           <Link
             href="/signin"
             className="bg-green-500 text-white px-4 py-2 rounded-md items-center gap-1 hover:bg-green-600 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 text-sm"
@@ -91,9 +92,9 @@ export default function HomePage() {
         </button>
       </nav>
 
-      {/* Mobile Dropdown */}
+      {/* Mobile Dropdown (ALSO visible on laptop now) */}
       {mobileMenu && (
-        <div className="md:hidden bg-white shadow-lg border-b p-5 space-y-4 text-gray-700">
+        <div className="bg-white shadow-lg border-b p-5 space-y-4 text-gray-700">
           <Link href="/dashboard" className="block">
             Dashboard
           </Link>
