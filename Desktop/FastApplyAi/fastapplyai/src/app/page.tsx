@@ -138,7 +138,7 @@ export default function HomePage() {
         </p>
 
         <Link
-          href="/signin"
+          href="/signup"
           className="mt-6 sm:mt-8 inline-block bg-green-500 text-white px-6 sm:px-7 py-3 rounded-xl font-semibold text-base sm:text-lg shadow-lg hover:bg-green-600 transition-all"
         >
           Get Started — Sign In
