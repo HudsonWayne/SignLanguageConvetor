@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { FcGoogle } from "react-icons/fc";
 import { FaGithub, FaApple, FaMicrosoft } from "react-icons/fa";
-import ClientOnly from "@/components/ClientOnly";
+import ClientOnly from "../components/ClientOnly";
 
 export default function SignInPage() {
   const [form, setForm] = useState({ email: "" });
@@ -79,7 +79,10 @@ export default function SignInPage() {
             <AnimatedButton icon={<FcGoogle />} text="Continue with Google" />
             <AnimatedButton icon={<FaGithub />} text="Continue with GitHub" />
             <AnimatedButton icon={<FaApple />} text="Continue with Apple" />
-            <AnimatedButton icon={<FaMicrosoft className="text-blue-600" />} text="Continue with Microsoft" />
+            <AnimatedButton
+              icon={<FaMicrosoft className="text-blue-600" />}
+              text="Continue with Microsoft"
+            />
           </motion.div>
 
           {/* Divider */}
@@ -111,9 +114,10 @@ export default function SignInPage() {
 
             <button
               type="submit"
-              className="w-full bg-green-500 text-white rounded-lg py-2 font-medium hover:bg-green-600 transition-all"
+              className="w-full bg-gray-200 text-gray-500 cursor-not-allowed rounded-lg py-2 font-medium"
+              disabled
             >
-              Continue
+              Continue with Email
             </button>
           </motion.form>
 
@@ -125,8 +129,14 @@ export default function SignInPage() {
             className="text-xs text-gray-400 mt-6"
           >
             By continuing, you agree to our{" "}
-            <a href="#" className="text-green-500 underline">Terms of Service</a> and{" "}
-            <a href="#" className="text-green-500 underline">Privacy Policy</a>.
+            <a href="#" className="text-green-500 underline">
+              Terms of Service
+            </a>{" "}
+            and{" "}
+            <a href="#" className="text-green-500 underline">
+              Privacy Policy
+            </a>
+            .
           </motion.p>
 
           {/* Footer */}
@@ -138,7 +148,10 @@ export default function SignInPage() {
           >
             Powered by{" "}
             <span className="inline-flex items-center gap-1 font-semibold text-gray-700">
-              <span className="bg-black text-white text-[10px] px-2 py-1 rounded-md">B</span> Blink
+              <span className="bg-black text-white text-[10px] px-2 py-1 rounded-md">
+                B
+              </span>
+              Blink
             </span>
           </motion.div>
         </motion.div>
@@ -148,7 +161,13 @@ export default function SignInPage() {
 }
 
 /* Helper Component for Animated Buttons */
-function AnimatedButton({ icon, text }: { icon: React.ReactNode; text: string }) {
+function AnimatedButton({
+  icon,
+  text,
+}: {
+  icon: React.ReactNode;
+  text: string;
+}) {
   return (
     <motion.button
       whileHover={{ scale: 1.04, y: -2 }}
