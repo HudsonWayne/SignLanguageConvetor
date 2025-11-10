@@ -22,7 +22,7 @@ export default function SignInPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-blue-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-green-50 px-4">
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
@@ -34,7 +34,7 @@ export default function SignInPage() {
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ duration: 1, delay: 0.2 }}
-          className="absolute -top-20 -right-20 h-56 w-56 bg-blue-200 opacity-40 rounded-full blur-3xl"
+          className="absolute -top-20 -right-20 h-56 w-56 bg-green-200 opacity-40 rounded-full blur-3xl"
         ></motion.div>
 
         {/* Logo */}
@@ -44,8 +44,8 @@ export default function SignInPage() {
           transition={{ duration: 0.5, delay: 0.3 }}
           className="flex justify-center mb-5 relative z-10"
         >
-          <div className="h-14 w-14 bg-gradient-to-r from-blue-500 to-purple-600 text-white flex items-center justify-center rounded-2xl font-bold text-lg shadow-md">
-            H
+          <div className="h-14 w-14 bg-green-500 text-white flex items-center justify-center rounded-2xl font-bold text-lg shadow-md">
+            QA
           </div>
         </motion.div>
 
@@ -106,7 +106,7 @@ export default function SignInPage() {
           <input
             type="email"
             placeholder="Enter your email"
-            className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+            className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 transition-all"
             onChange={(e) => setForm({ ...form, email: e.target.value })}
           />
 
@@ -127,11 +127,11 @@ export default function SignInPage() {
           className="text-xs text-gray-400 mt-6"
         >
           By continuing, you agree to our{" "}
-          <a href="#" className="text-blue-500 underline">
+          <a href="#" className="text-green-500 underline">
             Terms of Service
           </a>{" "}
           and{" "}
-          <a href="#" className="text-blue-500 underline">
+          <a href="#" className="text-green-500 underline">
             Privacy Policy
           </a>
           .
