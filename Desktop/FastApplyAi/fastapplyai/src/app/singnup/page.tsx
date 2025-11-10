@@ -6,13 +6,13 @@ import { FcGoogle } from "react-icons/fc";
 import { FaGithub, FaApple, FaMicrosoft } from "react-icons/fa";
 import ClientOnly from "../components/ClientOnly";
 
-export default function SignInPage() {
-  const [form, setForm] = useState({ email: "" });
+export default function SignUpPage() {
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const res = await fetch("/api/signin", {
+    const res = await fetch("/api/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
@@ -58,7 +58,7 @@ export default function SignInPage() {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="text-3xl font-semibold mb-1"
           >
-            Welcome to Hello App
+            Create your account
           </motion.h1>
           <motion.p
             initial={{ opacity: 0 }}
@@ -66,7 +66,7 @@ export default function SignInPage() {
             transition={{ delay: 0.5 }}
             className="text-gray-500 mb-8"
           >
-            Sign in to continue
+            Sign up to get started
           </motion.p>
 
           {/* Social Buttons */}
@@ -76,12 +76,12 @@ export default function SignInPage() {
             transition={{ delay: 0.6 }}
             className="space-y-3 relative z-10"
           >
-            <AnimatedButton icon={<FcGoogle />} text="Continue with Google" />
-            <AnimatedButton icon={<FaGithub />} text="Continue with GitHub" />
-            <AnimatedButton icon={<FaApple />} text="Continue with Apple" />
+            <AnimatedButton icon={<FcGoogle />} text="Sign up with Google" />
+            <AnimatedButton icon={<FaGithub />} text="Sign up with GitHub" />
+            <AnimatedButton icon={<FaApple />} text="Sign up with Apple" />
             <AnimatedButton
               icon={<FaMicrosoft className="text-blue-600" />}
-              text="Continue with Microsoft"
+              text="Sign up with Microsoft"
             />
           </motion.div>
 
@@ -93,7 +93,7 @@ export default function SignInPage() {
             className="flex items-center my-6 text-gray-400"
           >
             <hr className="flex-grow border-gray-300" />
-            <span className="mx-3 text-sm">OR CONTINUE WITH EMAIL</span>
+            <span className="mx-3 text-sm">OR SIGN UP WITH EMAIL</span>
             <hr className="flex-grow border-gray-300" />
           </motion.div>
 
@@ -106,18 +106,29 @@ export default function SignInPage() {
             className="space-y-3 relative z-10"
           >
             <input
+              type="text"
+              placeholder="Full Name"
+              className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 transition-all"
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+            />
+            <input
               type="email"
-              placeholder="Enter your email"
+              placeholder="Email Address"
               className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 transition-all"
               onChange={(e) => setForm({ ...form, email: e.target.value })}
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 transition-all"
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
             />
 
             <button
               type="submit"
-              className="w-full bg-gray-200 text-gray-500 cursor-not-allowed rounded-lg py-2 font-medium"
-              disabled
+              className="w-full bg-green-500 text-white rounded-lg py-2 font-medium hover:bg-green-600 transition-all"
             >
-              Continue with Email
+              Sign Up
             </button>
           </motion.form>
 
@@ -128,7 +139,7 @@ export default function SignInPage() {
             transition={{ delay: 1 }}
             className="text-xs text-gray-400 mt-6"
           >
-            By continuing, you agree to our{" "}
+            By signing up, you agree to our{" "}
             <a href="#" className="text-green-500 underline">
               Terms of Service
             </a>{" "}
