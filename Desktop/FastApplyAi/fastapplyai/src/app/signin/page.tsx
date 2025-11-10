@@ -1,25 +1,44 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { FcGoogle } from "react-icons/fc";
 import { FaGithub, FaApple, FaMicrosoft } from "react-icons/fa";
 import ClientOnly from "../components/ClientOnly";
 
 export default function SignInPage() {
+  const router = useRouter();
   const [form, setForm] = useState({ email: "" });
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.email) return alert("Please enter your email");
 
-    const res = await fetch("/api/signin", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
+    setLoading(true);
+    try {
+      const res = await fetch("/api/signin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
 
-    const data = await res.json();
-    alert(data.message);
+      const data = await res.json();
+
+      if (res.ok) {
+        alert(data.message || "Sign-in successful!");
+        // Redirect to dashboard or homepage
+        router.push("/dashboard");
+      } else {
+        alert(data.message || "Sign-in failed. Try again.");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -31,6 +50,7 @@ export default function SignInPage() {
           transition={{ duration: 0.7, ease: "easeOut" }}
           className="bg-white shadow-2xl rounded-3xl p-10 w-full max-w-md text-center relative overflow-hidden"
         >
+          {/* Decorative Circle */}
           <motion.div
             initial={false}
             animate={{ scale: 1 }}
@@ -38,6 +58,7 @@ export default function SignInPage() {
             className="absolute -top-20 -right-20 h-56 w-56 bg-green-200 opacity-40 rounded-full blur-3xl"
           />
 
+          {/* Logo */}
           <motion.div
             initial={false}
             animate={{ scale: 1 }}
@@ -49,6 +70,7 @@ export default function SignInPage() {
             </div>
           </motion.div>
 
+          {/* Title */}
           <motion.h1
             initial={false}
             animate={{ opacity: 1, y: 0 }}
@@ -66,6 +88,7 @@ export default function SignInPage() {
             Sign in to continue
           </motion.p>
 
+          {/* Social Buttons */}
           <motion.div
             initial={false}
             animate={{ opacity: 1, y: 0 }}
@@ -81,6 +104,7 @@ export default function SignInPage() {
             />
           </motion.div>
 
+          {/* Divider */}
           <motion.div
             initial={false}
             animate={{ opacity: 1 }}
@@ -92,6 +116,7 @@ export default function SignInPage() {
             <hr className="flex-grow border-gray-300" />
           </motion.div>
 
+          {/* Email Form */}
           <motion.form
             onSubmit={handleSubmit}
             initial={false}
@@ -103,18 +128,25 @@ export default function SignInPage() {
               type="email"
               placeholder="Enter your email"
               className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 transition-all"
+              value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
+              required
             />
 
             <button
               type="submit"
-              className="w-full bg-gray-200 text-gray-500 cursor-not-allowed rounded-lg py-2 font-medium"
-              disabled
+              className={`w-full rounded-lg py-2 font-medium text-white transition-all ${
+                loading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-green-500 hover:bg-green-600"
+              }`}
+              disabled={loading}
             >
-              Continue with Email
+              {loading ? "Signing in..." : "Continue with Email"}
             </button>
           </motion.form>
 
+          {/* Terms */}
           <motion.p
             initial={false}
             animate={{ opacity: 1 }}
@@ -132,6 +164,7 @@ export default function SignInPage() {
             .
           </motion.p>
 
+          {/* Footer */}
           <motion.div
             initial={false}
             animate={{ opacity: 1 }}
@@ -152,14 +185,8 @@ export default function SignInPage() {
   );
 }
 
-/* Helper Component for Animated Buttons */
-function AnimatedButton({
-  icon,
-  text,
-}: {
-  icon: React.ReactNode;
-  text: string;
-}) {
+/* Animated Button Component */
+function AnimatedButton({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
     <motion.button
       whileHover={{ scale: 1.04, y: -2 }}
