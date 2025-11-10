@@ -4,15 +4,15 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { FcGoogle } from "react-icons/fc";
 import { FaGithub, FaApple, FaMicrosoft } from "react-icons/fa";
-import ClientOnly from "@/components/ClientOnly";
+import ClientOnly from "../components/ClientOnly";
 
-export default function SignUpPage() {
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
+export default function SignInPage() {
+  const [form, setForm] = useState({ email: "" });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const res = await fetch("/api/signup", {
+    const res = await fetch("/api/signin", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
@@ -58,7 +58,7 @@ export default function SignUpPage() {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="text-3xl font-semibold mb-1"
           >
-            Create your account
+            Welcome to Hello App
           </motion.h1>
           <motion.p
             initial={{ opacity: 0 }}
@@ -66,7 +66,7 @@ export default function SignUpPage() {
             transition={{ delay: 0.5 }}
             className="text-gray-500 mb-8"
           >
-            Sign up to get started
+            Sign in to continue
           </motion.p>
 
           {/* Social Buttons */}
@@ -76,10 +76,13 @@ export default function SignUpPage() {
             transition={{ delay: 0.6 }}
             className="space-y-3 relative z-10"
           >
-            <AnimatedButton icon={<FcGoogle />} text="Sign up with Google" />
-            <AnimatedButton icon={<FaGithub />} text="Sign up with GitHub" />
-            <AnimatedButton icon={<FaApple />} text="Sign up with Apple" />
-            <AnimatedButton icon={<FaMicrosoft className="text-blue-600" />} text="Sign up with Microsoft" />
+            <AnimatedButton icon={<FcGoogle />} text="Continue with Google" />
+            <AnimatedButton icon={<FaGithub />} text="Continue with GitHub" />
+            <AnimatedButton icon={<FaApple />} text="Continue with Apple" />
+            <AnimatedButton
+              icon={<FaMicrosoft className="text-blue-600" />}
+              text="Continue with Microsoft"
+            />
           </motion.div>
 
           {/* Divider */}
@@ -90,7 +93,7 @@ export default function SignUpPage() {
             className="flex items-center my-6 text-gray-400"
           >
             <hr className="flex-grow border-gray-300" />
-            <span className="mx-3 text-sm">OR SIGN UP WITH EMAIL</span>
+            <span className="mx-3 text-sm">OR CONTINUE WITH EMAIL</span>
             <hr className="flex-grow border-gray-300" />
           </motion.div>
 
@@ -103,29 +106,18 @@ export default function SignUpPage() {
             className="space-y-3 relative z-10"
           >
             <input
-              type="text"
-              placeholder="Full Name"
-              className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 transition-all"
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
-            <input
               type="email"
-              placeholder="Email Address"
+              placeholder="Enter your email"
               className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 transition-all"
               onChange={(e) => setForm({ ...form, email: e.target.value })}
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 transition-all"
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
             />
 
             <button
               type="submit"
-              className="w-full bg-green-500 text-white rounded-lg py-2 font-medium hover:bg-green-600 transition-all"
+              className="w-full bg-gray-200 text-gray-500 cursor-not-allowed rounded-lg py-2 font-medium"
+              disabled
             >
-              Sign Up
+              Continue with Email
             </button>
           </motion.form>
 
@@ -136,9 +128,15 @@ export default function SignUpPage() {
             transition={{ delay: 1 }}
             className="text-xs text-gray-400 mt-6"
           >
-            By signing up, you agree to our{" "}
-            <a href="#" className="text-green-500 underline">Terms of Service</a> and{" "}
-            <a href="#" className="text-green-500 underline">Privacy Policy</a>.
+            By continuing, you agree to our{" "}
+            <a href="#" className="text-green-500 underline">
+              Terms of Service
+            </a>{" "}
+            and{" "}
+            <a href="#" className="text-green-500 underline">
+              Privacy Policy
+            </a>
+            .
           </motion.p>
 
           {/* Footer */}
@@ -150,7 +148,10 @@ export default function SignUpPage() {
           >
             Powered by{" "}
             <span className="inline-flex items-center gap-1 font-semibold text-gray-700">
-              <span className="bg-black text-white text-[10px] px-2 py-1 rounded-md">B</span> Blink
+              <span className="bg-black text-white text-[10px] px-2 py-1 rounded-md">
+                B
+              </span>
+              Blink
             </span>
           </motion.div>
         </motion.div>
@@ -160,7 +161,13 @@ export default function SignUpPage() {
 }
 
 /* Helper Component for Animated Buttons */
-function AnimatedButton({ icon, text }: { icon: React.ReactNode; text: string }) {
+function AnimatedButton({
+  icon,
+  text,
+}: {
+  icon: React.ReactNode;
+  text: string;
+}) {
   return (
     <motion.button
       whileHover={{ scale: 1.04, y: -2 }}
