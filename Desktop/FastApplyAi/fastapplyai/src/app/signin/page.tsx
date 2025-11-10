@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { motion } from "framer-motion";
 import { FcGoogle } from "react-icons/fc";
 import { FaGithub, FaApple, FaMicrosoft } from "react-icons/fa";
@@ -28,10 +29,28 @@ export default function SignInPage() {
 
       if (res.ok) {
         alert(data.message || "Sign-in successful!");
-        // Redirect to dashboard or homepage
         router.push("/dashboard");
       } else {
         alert(data.message || "Sign-in failed. Try again.");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Social login handler
+  const handleSocialSignIn = async (provider: string) => {
+    setLoading(true);
+    try {
+      const result = await signIn(provider, { redirect: false });
+      if (result?.ok) {
+        alert("Sign-in successful!");
+        router.push("/dashboard");
+      } else {
+        alert("Social sign-in failed. Try again.");
       }
     } catch (error) {
       console.error(error);
@@ -95,12 +114,25 @@ export default function SignInPage() {
             transition={{ delay: 0.6 }}
             className="space-y-3 relative z-10"
           >
-            <AnimatedButton icon={<FcGoogle />} text="Continue with Google" />
-            <AnimatedButton icon={<FaGithub />} text="Continue with GitHub" />
-            <AnimatedButton icon={<FaApple />} text="Continue with Apple" />
+            <AnimatedButton
+              icon={<FcGoogle />}
+              text="Continue with Google"
+              onClick={() => handleSocialSignIn("google")}
+            />
+            <AnimatedButton
+              icon={<FaGithub />}
+              text="Continue with GitHub"
+              onClick={() => handleSocialSignIn("github")}
+            />
+            <AnimatedButton
+              icon={<FaApple />}
+              text="Continue with Apple"
+              onClick={() => handleSocialSignIn("apple")}
+            />
             <AnimatedButton
               icon={<FaMicrosoft className="text-blue-600" />}
               text="Continue with Microsoft"
+              onClick={() => handleSocialSignIn("microsoft")}
             />
           </motion.div>
 
@@ -186,11 +218,20 @@ export default function SignInPage() {
 }
 
 /* Animated Button Component */
-function AnimatedButton({ icon, text }: { icon: React.ReactNode; text: string }) {
+function AnimatedButton({
+  icon,
+  text,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  text: string;
+  onClick?: () => void;
+}) {
   return (
     <motion.button
       whileHover={{ scale: 1.04, y: -2 }}
       whileTap={{ scale: 0.98 }}
+      onClick={onClick}
       className="w-full border border-gray-200 rounded-lg py-2 flex items-center justify-center gap-2 hover:shadow-md hover:bg-gray-50 transition-all"
     >
       <span className="text-xl">{icon}</span>
