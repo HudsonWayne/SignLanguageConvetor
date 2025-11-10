@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
+import { FcGoogle } from "react-icons/fc";
+import { FaGithub, FaApple, FaMicrosoft } from "react-icons/fa";
 
 export default function SignInPage() {
-  const [form, setForm] = useState({ email: "", password: "" });
+  const [form, setForm] = useState({ email: "" });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,33 +22,157 @@ export default function SignInPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white shadow-md rounded-xl p-8 w-full max-w-md">
-        <h1 className="text-3xl font-bold mb-6 text-center">Sign In</h1>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-blue-50 px-4">
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7, ease: "easeOut" }}
+        className="bg-white shadow-2xl rounded-3xl p-10 w-full max-w-md text-center relative overflow-hidden"
+      >
+        {/* Decorative gradient background circle */}
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ duration: 1, delay: 0.2 }}
+          className="absolute -top-20 -right-20 h-56 w-56 bg-blue-200 opacity-40 rounded-full blur-3xl"
+        ></motion.div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            placeholder="Email"
-            type="email"
-            className="w-full p-3 border rounded-lg focus:outline-none focus:ring focus:ring-blue-300"
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
+        {/* Logo */}
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="flex justify-center mb-5 relative z-10"
+        >
+          <div className="h-14 w-14 bg-gradient-to-r from-blue-500 to-purple-600 text-white flex items-center justify-center rounded-2xl font-bold text-lg shadow-md">
+            H
+          </div>
+        </motion.div>
+
+        {/* Title */}
+        <motion.h1
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="text-3xl font-semibold mb-1"
+        >
+          Welcome to Hello App
+        </motion.h1>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="text-gray-500 mb-8"
+        >
+          Sign in to continue
+        </motion.p>
+
+        {/* Social Buttons */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="space-y-3 relative z-10"
+        >
+          <AnimatedButton icon={<FcGoogle />} text="Continue with Google" />
+          <AnimatedButton icon={<FaGithub />} text="Continue with GitHub" />
+          <AnimatedButton icon={<FaApple />} text="Continue with Apple" />
+          <AnimatedButton
+            icon={<FaMicrosoft className="text-blue-600" />}
+            text="Continue with Microsoft"
           />
+        </motion.div>
 
+        {/* Divider */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8 }}
+          className="flex items-center my-6 text-gray-400"
+        >
+          <hr className="flex-grow border-gray-300" />
+          <span className="mx-3 text-sm">OR CONTINUE WITH EMAIL</span>
+          <hr className="flex-grow border-gray-300" />
+        </motion.div>
+
+        {/* Email Form */}
+        <motion.form
+          onSubmit={handleSubmit}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.9 }}
+          className="space-y-3 relative z-10"
+        >
           <input
-            placeholder="Password"
-            type="password"
-            className="w-full p-3 border rounded-lg focus:outline-none focus:ring focus:ring-blue-300"
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            type="email"
+            placeholder="Enter your email"
+            className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
           />
 
           <button
             type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg py-2 font-semibold"
+            className="w-full bg-gray-200 text-gray-500 cursor-not-allowed rounded-lg py-2 font-medium"
+            disabled
           >
-            Sign In
+            Continue with Email
           </button>
-        </form>
-      </div>
+        </motion.form>
+
+        {/* Terms */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1 }}
+          className="text-xs text-gray-400 mt-6"
+        >
+          By continuing, you agree to our{" "}
+          <a href="#" className="text-blue-500 underline">
+            Terms of Service
+          </a>{" "}
+          and{" "}
+          <a href="#" className="text-blue-500 underline">
+            Privacy Policy
+          </a>
+          .
+        </motion.p>
+
+        {/* Footer */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.1 }}
+          className="mt-6 text-gray-400 text-xs"
+        >
+          Powered by{" "}
+          <span className="inline-flex items-center gap-1 font-semibold text-gray-700">
+            <span className="bg-black text-white text-[10px] px-2 py-1 rounded-md">
+              B
+            </span>
+            Blink
+          </span>
+        </motion.div>
+      </motion.div>
     </div>
+  );
+}
+
+/* Helper Component for Animated Buttons */
+function AnimatedButton({
+  icon,
+  text,
+}: {
+  icon: React.ReactNode;
+  text: string;
+}) {
+  return (
+    <motion.button
+      whileHover={{ scale: 1.04, y: -2 }}
+      whileTap={{ scale: 0.98 }}
+      className="w-full border border-gray-200 rounded-lg py-2 flex items-center justify-center gap-2 hover:shadow-md hover:bg-gray-50 transition-all"
+    >
+      <span className="text-xl">{icon}</span>
+      <span>{text}</span>
+    </motion.button>
   );
 }
