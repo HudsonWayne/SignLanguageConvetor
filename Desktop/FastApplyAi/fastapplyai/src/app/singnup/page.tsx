@@ -26,22 +26,20 @@ export default function SignUpPage() {
     <ClientOnly>
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-300 via-blue-200 to-green-200 bg-[length:200%_200%] animate-gradientFlow px-4">
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
+          initial={false}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: "easeOut" }}
           className="bg-white shadow-2xl rounded-3xl p-10 w-full max-w-md text-center relative overflow-hidden"
         >
-          {/* Decorative gradient background circle */}
           <motion.div
-            initial={{ scale: 0 }}
+            initial={false}
             animate={{ scale: 1 }}
             transition={{ duration: 1, delay: 0.2 }}
             className="absolute -top-20 -right-20 h-56 w-56 bg-green-200 opacity-40 rounded-full blur-3xl"
-          ></motion.div>
+          />
 
-          {/* Logo */}
           <motion.div
-            initial={{ scale: 0 }}
+            initial={false}
             animate={{ scale: 1 }}
             transition={{ duration: 0.5, delay: 0.3 }}
             className="flex justify-center mb-5 relative z-10"
@@ -51,9 +49,8 @@ export default function SignUpPage() {
             </div>
           </motion.div>
 
-          {/* Title */}
           <motion.h1
-            initial={{ opacity: 0, y: 10 }}
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
             className="text-3xl font-semibold mb-1"
@@ -61,7 +58,7 @@ export default function SignUpPage() {
             Create your account
           </motion.h1>
           <motion.p
-            initial={{ opacity: 0 }}
+            initial={false}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
             className="text-gray-500 mb-8"
@@ -69,9 +66,8 @@ export default function SignUpPage() {
             Sign up to get started
           </motion.p>
 
-          {/* Social Buttons */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
             className="space-y-3 relative z-10"
@@ -85,9 +81,8 @@ export default function SignUpPage() {
             />
           </motion.div>
 
-          {/* Divider */}
           <motion.div
-            initial={{ opacity: 0 }}
+            initial={false}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.8 }}
             className="flex items-center my-6 text-gray-400"
@@ -97,10 +92,9 @@ export default function SignUpPage() {
             <hr className="flex-grow border-gray-300" />
           </motion.div>
 
-          {/* Email Form */}
           <motion.form
             onSubmit={handleSubmit}
-            initial={{ opacity: 0, y: 10 }}
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.9 }}
             className="space-y-3 relative z-10"
@@ -132,9 +126,8 @@ export default function SignUpPage() {
             </button>
           </motion.form>
 
-          {/* Terms */}
           <motion.p
-            initial={{ opacity: 0 }}
+            initial={false}
             animate={{ opacity: 1 }}
             transition={{ delay: 1 }}
             className="text-xs text-gray-400 mt-6"
@@ -150,9 +143,8 @@ export default function SignUpPage() {
             .
           </motion.p>
 
-          {/* Footer */}
           <motion.div
-            initial={{ opacity: 0 }}
+            initial={false}
             animate={{ opacity: 1 }}
             transition={{ delay: 1.1 }}
             className="mt-6 text-gray-400 text-xs"
@@ -171,14 +163,7 @@ export default function SignUpPage() {
   );
 }
 
-/* Helper Component for Animated Buttons */
-function AnimatedButton({
-  icon,
-  text,
-}: {
-  icon: React.ReactNode;
-  text: string;
-}) {
+function AnimatedButton({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
     <motion.button
       whileHover={{ scale: 1.04, y: -2 }}
