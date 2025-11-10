@@ -1,4 +1,4 @@
-// pages/api/auth/signin.ts
+// pages/api/signin.ts
 import { NextApiRequest, NextApiResponse } from "next";
 import { connectDB } from "@/lib/mongo";
 import User from "@/models/user";
