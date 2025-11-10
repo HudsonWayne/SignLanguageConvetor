@@ -5,29 +5,31 @@ import bcrypt from "bcryptjs";
 
 export async function POST(req: Request) {
   try {
-    const { name, email, password } = await req.json();
+    const { email, password } = await req.json();
     await connectDB();
 
-    const exists = await User.findOne({ email });
-    if (exists) {
+    const user = await User.findOne({ email });
+    if (!user) {
       return NextResponse.json(
-        { message: "User already exists" },
-        { status: 400 }
+        { message: "User not found" },
+        { status: 404 }
       );
     }
 
-    const hashed = await bcrypt.hash(password, 10);
-
-    await User.create({ name, email, password: hashed });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return NextResponse.json(
+        { message: "Invalid credentials" },
+        { status: 401 }
+      );
+    }
 
     return NextResponse.json(
-      { message: "User registered!" },
-      { status: 201 }
+      { message: "Login successful", user: { name: user.name, email: user.email } },
+      { status: 200 }
     );
   } catch (error) {
-    return NextResponse.json(
-      { message: "Server error" },
-      { status: 500 }
-    );
+    console.error(error);
+    return NextResponse.json({ message: "Server error" }, { status: 500 });
   }
 }
