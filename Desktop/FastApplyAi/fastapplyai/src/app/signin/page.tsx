@@ -10,7 +10,34 @@ import ClientOnly from "../components/ClientOnly";
 export default function SignInPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({ email: "", password: "" });
 
+  // Email/password sign-in
+  const handleEmailSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const result = await signIn("credentials", {
+        redirect: false,
+        email: form.email,
+        password: form.password,
+      });
+
+      if (result?.ok) {
+        router.push("/dashboard");
+      } else {
+        alert(result?.error || "Sign-in failed");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("An error occurred during sign-in");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Social login
   const handleSocialSignIn = async (provider: string) => {
     setLoading(true);
     await signIn(provider, { callbackUrl: "/dashboard" });
@@ -21,6 +48,7 @@ export default function SignInPage() {
     <ClientOnly>
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-300 via-blue-200 to-green-200 px-4">
         <div className="bg-white shadow-2xl rounded-3xl p-10 w-full max-w-md text-center relative overflow-hidden">
+          {/* Logo */}
           <div className="flex justify-center mb-5 relative z-10">
             <div className="h-14 w-14 bg-green-500 text-white flex items-center justify-center rounded-2xl font-bold text-lg shadow-md">
               QA
@@ -30,6 +58,7 @@ export default function SignInPage() {
           <h1 className="text-3xl font-semibold mb-1">Welcome to Hello App</h1>
           <p className="text-gray-500 mb-8">Sign in to continue</p>
 
+          {/* Social buttons */}
           <div className="space-y-3 relative z-10">
             <AnimatedButton
               icon={<FcGoogle />}
@@ -41,6 +70,58 @@ export default function SignInPage() {
               text="Continue with Apple"
               onClick={() => handleSocialSignIn("apple")}
             />
+          </div>
+
+          {/* Divider */}
+          <div className="flex items-center my-6 text-gray-400">
+            <hr className="flex-grow border-gray-300" />
+            <span className="mx-3 text-sm">OR SIGN IN WITH EMAIL</span>
+            <hr className="flex-grow border-gray-300" />
+          </div>
+
+          {/* Email/Password Form */}
+          <form onSubmit={handleEmailSignIn} className="space-y-3 relative z-10">
+            <input
+              type="email"
+              placeholder="Enter your email"
+              className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 transition-all"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              required
+            />
+            <input
+              type="password"
+              placeholder="Enter your password"
+              className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 transition-all"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              required
+            />
+            <button
+              type="submit"
+              disabled={loading}
+              className={`w-full rounded-lg py-2 font-medium text-white transition-all ${
+                loading ? "bg-gray-400 cursor-not-allowed" : "bg-green-500 hover:bg-green-600"
+              }`}
+            >
+              {loading ? "Signing in..." : "Sign in with Email"}
+            </button>
+          </form>
+
+          {/* Terms */}
+          <p className="text-xs text-gray-400 mt-6">
+            By continuing, you agree to our{" "}
+            <a href="#" className="text-green-500 underline">Terms of Service</a> and{" "}
+            <a href="#" className="text-green-500 underline">Privacy Policy</a>.
+          </p>
+
+          {/* Footer */}
+          <div className="mt-6 text-gray-400 text-xs">
+            Powered by{" "}
+            <span className="inline-flex items-center gap-1 font-semibold text-gray-700">
+              <span className="bg-black text-white text-[10px] px-2 py-1 rounded-md">B</span>
+              Blink
+            </span>
           </div>
         </div>
       </div>
