@@ -1,18 +1,20 @@
-// /lib/mongodb.ts
 import mongoose from "mongoose";
 
-let isConnected = false;
+const MONGODB_URI = process.env.MONGODB_URI as string;
+
+if (!MONGODB_URI) {
+  throw new Error("⚠️ Please add your MongoDB URI to .env.local");
+}
+
+let cached = (global as any).mongoose || { conn: null, promise: null };
 
 export async function connectDB() {
-  if (isConnected) return;
+  if (cached.conn) return cached.conn;
 
-  try {
-    await mongoose.connect(process.env.MONGODB_URI as string, {
-      dbName: "QuickApplyAi",
-    });
-    isConnected = true;
-    console.log("✅ MongoDB Connected");
-  } catch (error) {
-    console.error("❌ MongoDB Error:", error);
+  if (!cached.promise) {
+    cached.promise = mongoose.connect(MONGODB_URI).then((mongoose) => mongoose);
   }
+
+  cached.conn = await cached.promise;
+  return cached.conn;
 }
