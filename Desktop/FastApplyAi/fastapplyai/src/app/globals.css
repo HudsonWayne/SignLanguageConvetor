@@ -90,3 +90,39 @@ body {
   animation: gradientFlow 8s ease infinite;
 }
 
+
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Smooth gradient motion */
+@keyframes gradientFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+.animate-gradientFlow {
+  animation: gradientFlow 10s ease infinite;
+}
+
+/* Gentle fade-up for elements */
+@keyframes fadeUp {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fadeUp {
+  animation: fadeUp 1s ease forwards;
+}
