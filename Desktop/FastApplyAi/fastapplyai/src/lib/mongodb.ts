@@ -3,16 +3,20 @@ import mongoose from "mongoose";
 const MONGODB_URI = process.env.MONGODB_URI as string;
 
 if (!MONGODB_URI) {
-  throw new Error("⚠️ Please add your MongoDB URI to .env.local");
+  throw new Error("❌ Missing MONGODB_URI in environment variables");
 }
 
-let cached = (global as any).mongoose || { conn: null, promise: null };
-
 export async function connectDB() {
-  if (cached.conn) return cached.conn;
-  if (!cached.promise) {
-    cached.promise = mongoose.connect(MONGODB_URI).then((mongoose) => mongoose);
+  try {
+    if (mongoose.connection.readyState === 1) {
+      // already connected
+      return mongoose.connection;
+    }
+    await mongoose.connect(MONGODB_URI);
+    console.log("✅ MongoDB connected");
+    return mongoose.connection;
+  } catch (error) {
+    console.error("❌ MongoDB connection error:", error);
+    throw error;
   }
-  cached.conn = await cached.promise;
-  return cached.conn;
 }
