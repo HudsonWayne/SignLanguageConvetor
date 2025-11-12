@@ -13,51 +13,83 @@ import {
 
 export default function DashboardPage() {
   const [user, setUser] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    // Fetch user info from localStorage or backend auth state
-    const email = localStorage.getItem("email") || "waynewaynedenbenhura@gmail.com";
-    const username = email.split("@")[0];
-    setUser(username);
+    // Get email from localStorage (set during login)
+    const email = localStorage.getItem("email");
+    if (email) {
+      const name = email.split("@")[0];
+      setUser(name);
+    } else {
+      setUser("User");
+    }
+
+    // Responsive animation trigger
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  const handleLogout = () => {
+    localStorage.clear();
+    window.location.href = "/signin";
+  };
+
   return (
-    <div className="min-h-screen bg-[#f5fbff]">
+    <div
+      className={`min-h-screen bg-gradient-to-br from-purple-300 via-blue-200 to-green-200 text-gray-900 font-sans overflow-x-hidden bg-[length:200%_200%] ${
+        isMobile ? "" : "animate-gradientFlow"
+      }`}
+    >
       {/* NAVBAR */}
-      <nav className="flex items-center justify-between px-6 py-3 shadow bg-white sticky top-0 z-50">
-        <div className="flex items-center gap-2 font-bold text-lg text-gray-800">
-          <div className="bg-green-500 text-white px-2 py-1 rounded-md shadow-sm">QA</div>
-          <span>QuickApplyAI</span>
+      <nav className="flex items-center justify-between px-4 sm:px-6 md:px-10 lg:px-20 xl:px-24 2xl:px-40 py-4 shadow-md bg-white sticky top-0 z-50 backdrop-blur-md bg-opacity-90 w-full max-w-[1920px] mx-auto">
+        <div className="flex items-center gap-2 text-lg sm:text-xl font-bold transition-all hover:scale-105">
+          <div className="bg-green-500 text-white rounded-md px-2 py-1 shadow-sm">
+            QA
+          </div>
+          <span className="tracking-wide whitespace-nowrap">QuickApplyAI</span>
         </div>
 
-        <div className="flex items-center gap-6 text-sm text-gray-700">
+        <div className="flex items-center gap-4 lg:gap-8 text-sm text-gray-700 font-medium">
           <Link
             href="/dashboard"
-            className="flex items-center gap-1 bg-green-500 text-white px-3 py-2 rounded-md hover:bg-green-600 transition"
+            className="flex items-center gap-1 bg-green-500 text-white px-3 py-2 rounded-md hover:bg-green-600 transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5"
           >
             <FiUser /> Dashboard
           </Link>
-          <Link href="/upload-cv" className="flex items-center gap-1 hover:text-green-600">
+          <Link
+            href="/upload-cv"
+            className="flex items-center gap-1 hover:text-green-600 transition-all hover:-translate-y-0.5"
+          >
             <FiUpload /> Upload CV
           </Link>
-          <Link href="/find-jobs" className="flex items-center gap-1 hover:text-green-600">
+          <Link
+            href="/find-jobs"
+            className="flex items-center gap-1 hover:text-green-600 transition-all hover:-translate-y-0.5"
+          >
             <FiSearch /> Find Jobs
           </Link>
-          <Link href="/applied" className="hover:text-green-600">
+          <Link
+            href="/applied"
+            className="hover:text-green-600 transition-all hover:-translate-y-0.5"
+          >
             Applied Jobs
           </Link>
-          <Link href="/notifications" className="flex items-center gap-1 hover:text-green-600">
+          <Link
+            href="/notifications"
+            className="flex items-center gap-1 hover:text-green-600 transition-all hover:-translate-y-0.5"
+          >
             <FiBell /> Notifications
           </Link>
-          <span className="text-gray-500 hidden sm:block">
-            Welcome, <span className="font-semibold text-gray-700">{user}</span>
+          <span className="hidden sm:block text-gray-500">
+            Welcome,{" "}
+            <span className="font-semibold text-gray-700">{user}</span>
           </span>
           <button
-            onClick={() => {
-              localStorage.clear();
-              window.location.href = "/signin";
-            }}
-            className="flex items-center gap-1 bg-gray-100 px-3 py-1.5 rounded-md hover:bg-gray-200 transition"
+            onClick={handleLogout}
+            className="flex items-center gap-1 bg-gray-100 px-3 py-1.5 rounded-md hover:bg-gray-200 transition-all hover:-translate-y-0.5 shadow-sm"
           >
             <FiLogOut /> Logout
           </button>
@@ -65,81 +97,79 @@ export default function DashboardPage() {
       </nav>
 
       {/* MAIN CONTENT */}
-      <main className="px-4 sm:px-8 md:px-16 lg:px-24 py-10">
-        {/* Welcome Section */}
-        <div className="flex justify-between items-center mb-10">
+      <main
+        className={`px-6 sm:px-10 md:px-16 lg:px-24 xl:px-28 2xl:px-40 py-12 ${
+          isMobile ? "" : "animate-fadeUp"
+        }`}
+      >
+        {/* HEADER */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
-              Welcome back, {user}
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-800">
+              Welcome back,{" "}
+              <span className="text-green-600">{user}</span>
             </h1>
-            <p className="text-gray-600 mt-1">
-              Track your job applications and boost your hiring success
+            <p className="text-gray-700 mt-2 text-base sm:text-lg">
+              Track your job applications and boost your hiring success.
             </p>
           </div>
           <Link
             href="/upload-cv"
-            className="bg-green-500 text-white px-5 py-2 rounded-md hover:bg-green-600 transition"
+            className="mt-4 sm:mt-0 bg-green-500 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-green-600 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
           >
             Upload New CV
           </Link>
         </div>
 
         {/* STATS CARDS */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-10">
-          {/* Total Applications */}
-          <div className="bg-white shadow rounded-lg p-6 flex flex-col items-center justify-center">
-            <div className="text-green-500 text-3xl mb-2">
-              <FiFileText />
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-12">
+          {[
+            {
+              title: "Total Applications",
+              icon: <FiFileText />,
+              value: "0",
+            },
+            { title: "CV Views", icon: <FiUser />, value: "0" },
+            { title: "Response Rate", icon: "📈", value: "0%" },
+            { title: "Active Searches", icon: <FiSearch />, value: "0" },
+          ].map((card, i) => (
+            <div
+              key={i}
+              className="bg-white rounded-2xl shadow-lg p-6 text-center hover:-translate-y-1 hover:shadow-xl transition-all"
+            >
+              <div className="text-green-500 text-4xl mb-2 flex justify-center">
+                {card.icon}
+              </div>
+              <p className="text-gray-700 font-medium">{card.title}</p>
+              <p className="text-3xl font-extrabold mt-1">{card.value}</p>
             </div>
-            <p className="text-gray-700 font-medium">Total Applications</p>
-            <p className="text-2xl font-bold mt-1">0</p>
-          </div>
-
-          {/* CV Views */}
-          <div className="bg-white shadow rounded-lg p-6 flex flex-col items-center justify-center">
-            <div className="text-green-500 text-3xl mb-2">
-              <FiUser />
-            </div>
-            <p className="text-gray-700 font-medium">CV Views</p>
-            <p className="text-2xl font-bold mt-1">0</p>
-          </div>
-
-          {/* Response Rate */}
-          <div className="bg-white shadow rounded-lg p-6 flex flex-col items-center justify-center">
-            <div className="text-green-500 text-3xl mb-2">
-              📈
-            </div>
-            <p className="text-gray-700 font-medium">Response Rate</p>
-            <p className="text-2xl font-bold mt-1">0%</p>
-          </div>
-
-          {/* Active Searches */}
-          <div className="bg-white shadow rounded-lg p-6 flex flex-col items-center justify-center">
-            <div className="text-green-500 text-3xl mb-2">
-              <FiSearch />
-            </div>
-            <p className="text-gray-700 font-medium">Active Searches</p>
-            <p className="text-2xl font-bold mt-1">0</p>
-          </div>
+          ))}
         </div>
 
         {/* RECENT APPLICATIONS */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-800">Recent Applications</h2>
-            <Link href="/applied" className="text-green-600 hover:underline">
+        <div className="bg-white rounded-2xl shadow-lg p-8 text-center transition-all hover:shadow-xl">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold text-gray-800">
+              Recent Applications
+            </h2>
+            <Link
+              href="/applied"
+              className="text-green-600 hover:underline font-medium"
+            >
               View All
             </Link>
           </div>
 
-          <div className="text-center py-12">
-            <div className="flex justify-center mb-4">
-              <FiFileText className="text-4xl text-gray-400" />
+          <div className="flex flex-col items-center py-12">
+            <div className="bg-green-50 border border-green-200 rounded-full p-5 text-green-500 mb-4 shadow-inner">
+              <FiFileText className="text-4xl" />
             </div>
-            <p className="text-gray-500 mb-4">No applications yet</p>
+            <p className="text-gray-600 mb-6 text-base">
+              No applications yet
+            </p>
             <Link
               href="/find-jobs"
-              className="bg-green-500 text-white px-5 py-2 rounded-md hover:bg-green-600 transition"
+              className="bg-green-500 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-green-600 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
             >
               Find Jobs
             </Link>
