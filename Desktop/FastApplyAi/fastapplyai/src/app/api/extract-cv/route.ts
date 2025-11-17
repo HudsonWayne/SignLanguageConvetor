@@ -1,45 +1,54 @@
 import { NextResponse } from "next/server";
+import { createRequire } from "module"; // For using CJS modules in ESM
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
-  // Dynamically import pdf-parse (CJS) inside the function
-  const pdfParser = (await import("pdf-parse")).default || (await import("pdf-parse"));
+  // Load CJS pdf-parse module safely
+  const require = createRequire(import.meta.url);
+  const pdfParser = require("pdf-parse");
 
-  const formData = await req.formData();
-  const file = formData.get("file") as File;
+  try {
+    const formData = await req.formData();
+    const file = formData.get("file") as File;
 
-  if (!file) {
-    return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+    if (!file) {
+      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+    }
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    let text = "";
+
+    const ext = file.name.split(".").pop()?.toLowerCase();
+
+    if (ext === "pdf") {
+      const data = await pdfParser(buffer);
+      text = data.text;
+    } else if (ext === "txt") {
+      text = buffer.toString("utf-8");
+    } else if (ext === "docx") {
+      // Fallback: read DOCX as text buffer (simple)
+      text = buffer.toString("utf-8");
+    } else {
+      return NextResponse.json({ error: "Unsupported file type" }, { status: 400 });
+    }
+
+    const extracted = {
+      name: extractName(text),
+      email: extractEmail(text),
+      skills: extractSkills(text),
+      experience: extractExperience(text),
+      education: extractEducation(text),
+    };
+
+    return NextResponse.json(extracted);
+  } catch (err: any) {
+    console.error("Error extracting CV:", err);
+    return NextResponse.json({ error: "Failed to extract CV" }, { status: 500 });
   }
-
-  const buffer = Buffer.from(await file.arrayBuffer());
-  let text = "";
-
-  const ext = file.name.split(".").pop()?.toLowerCase();
-
-  if (ext === "pdf") {
-    const data = await pdfParser(buffer);
-    text = data.text;
-  } else if (ext === "txt") {
-    text = buffer.toString("utf-8");
-  } else if (ext === "docx") {
-    // Simple fallback: read as UTF-8 text
-    text = buffer.toString("utf-8");
-  } else {
-    return NextResponse.json({ error: "Unsupported file type" }, { status: 400 });
-  }
-
-  const extracted = {
-    name: extractName(text),
-    email: extractEmail(text),
-    skills: extractSkills(text),
-    experience: extractExperience(text),
-    education: extractEducation(text),
-  };
-
-  return NextResponse.json(extracted);
 }
+
+// --- Extraction Helper Functions ---
 
 function extractName(text: string) {
   const match = text.match(/([A-Z][a-z]+\s[A-Z][a-z]+)/);
