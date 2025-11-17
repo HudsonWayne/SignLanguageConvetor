@@ -49,10 +49,33 @@ export default function UploadCVPage() {
     setMessage("");
 
     try {
-      await new Promise((res) => setTimeout(res, 1500)); // Mock delay
-      setMessage("✅ CV uploaded successfully!");
-      setFile(null);
-    } catch {
+      // Create form data
+      const formData = new FormData();
+      formData.append("file", file);
+
+      // Call backend API
+      const res = await fetch("/api/upload-cv", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        console.log("Extracted CV data:", data);
+        setMessage("✅ CV uploaded & parsed successfully!");
+        setFile(null);
+
+        // Save parsed data for CV analysis page
+        localStorage.setItem("cvData", JSON.stringify(data));
+
+        // Redirect to analysis page
+        setTimeout(() => window.location.href = "/cv-analysis", 800);
+      } else {
+        setMessage("❌ Upload failed: " + data.error);
+      }
+    } catch (err) {
+      console.error(err);
       setMessage("❌ Upload failed. Please try again.");
     } finally {
       setUploading(false);
@@ -76,10 +99,7 @@ export default function UploadCVPage() {
 
         {/* Nav Links */}
         <div className="flex items-center gap-4 lg:gap-8 text-sm text-gray-700 font-medium">
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-1 hover:text-green-600 transition-all"
-          >
+          <Link href="/dashboard" className="flex items-center gap-1 hover:text-green-600 transition-all">
             <FiUser /> Dashboard
           </Link>
           <Link
@@ -88,10 +108,7 @@ export default function UploadCVPage() {
           >
             <FiUpload /> Upload CV
           </Link>
-          <Link
-            href="/find-jobs"
-            className="flex items-center gap-1 hover:text-green-600 transition-all"
-          >
+          <Link href="/find-jobs" className="flex items-center gap-1 hover:text-green-600 transition-all">
             <FiSearch /> Find Jobs
           </Link>
           <Link href="/applied" className="hover:text-green-600 transition-all">
@@ -105,9 +122,7 @@ export default function UploadCVPage() {
           </Link>
           <span className="hidden sm:block text-gray-500">
             Hi,{" "}
-            <span className="font-semibold text-gray-700 capitalize">
-              {user}
-            </span>
+            <span className="font-semibold text-gray-700 capitalize">{user}</span>
           </span>
           <button
             onClick={handleLogout}
