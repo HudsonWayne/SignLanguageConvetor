@@ -12,6 +12,13 @@ import {
 } from "react-icons/fi";
 import { motion } from "framer-motion";
 
+// Wrapper to only render children in client
+function ClientOnly({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  return mounted ? <>{children}</> : null;
+}
+
 export default function UploadCVPage() {
   const [user, setUser] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -49,11 +56,9 @@ export default function UploadCVPage() {
     setMessage("");
 
     try {
-      // Create form data
       const formData = new FormData();
       formData.append("file", file);
 
-      // Call backend API
       const res = await fetch("/api/upload-cv", {
         method: "POST",
         body: formData,
@@ -65,12 +70,8 @@ export default function UploadCVPage() {
         console.log("Extracted CV data:", data);
         setMessage("✅ CV uploaded & parsed successfully!");
         setFile(null);
-
-        // Save parsed data for CV analysis page
         localStorage.setItem("cvData", JSON.stringify(data));
-
-        // Redirect to analysis page
-        setTimeout(() => window.location.href = "/cv-analysis", 800);
+        setTimeout(() => (window.location.href = "/cv-analysis"), 800);
       } else {
         setMessage("❌ Upload failed: " + data.error);
       }
@@ -89,23 +90,16 @@ export default function UploadCVPage() {
 
       {/* NAVBAR */}
       <nav className="flex items-center justify-between px-6 sm:px-10 lg:px-20 py-4 shadow-md bg-white/60 backdrop-blur-xl sticky top-0 z-50 border-b border-white/40">
-        {/* Logo */}
         <div className="flex items-center gap-2 text-lg sm:text-xl font-bold transition-all hover:scale-105">
-          <div className="bg-green-500 text-white rounded-md px-2 py-1 shadow-sm">
-            QA
-          </div>
+          <div className="bg-green-500 text-white rounded-md px-2 py-1 shadow-sm">QA</div>
           <span className="tracking-wide">QuickApplyAI</span>
         </div>
 
-        {/* Nav Links */}
         <div className="flex items-center gap-4 lg:gap-8 text-sm text-gray-700 font-medium">
           <Link href="/dashboard" className="flex items-center gap-1 hover:text-green-600 transition-all">
             <FiUser /> Dashboard
           </Link>
-          <Link
-            href="/upload-cv"
-            className="flex items-center gap-1 bg-green-500 text-white px-3 py-2 rounded-md hover:bg-green-600 transition-all shadow-sm hover:shadow-md"
-          >
+          <Link href="/upload-cv" className="flex items-center gap-1 bg-green-500 text-white px-3 py-2 rounded-md hover:bg-green-600 transition-all shadow-sm hover:shadow-md">
             <FiUpload /> Upload CV
           </Link>
           <Link href="/find-jobs" className="flex items-center gap-1 hover:text-green-600 transition-all">
@@ -114,15 +108,11 @@ export default function UploadCVPage() {
           <Link href="/applied" className="hover:text-green-600 transition-all">
             <FiFileText /> Applied Jobs
           </Link>
-          <Link
-            href="/notifications"
-            className="flex items-center gap-1 hover:text-green-600 transition-all"
-          >
+          <Link href="/notifications" className="flex items-center gap-1 hover:text-green-600 transition-all">
             <FiBell /> Notifications
           </Link>
           <span className="hidden sm:block text-gray-500">
-            Hi,{" "}
-            <span className="font-semibold text-gray-700 capitalize">{user}</span>
+            Hi, <span className="font-semibold text-gray-700 capitalize">{user}</span>
           </span>
           <button
             onClick={handleLogout}
@@ -149,12 +139,9 @@ export default function UploadCVPage() {
             <FiUpload className="text-green-500 text-6xl mx-auto mb-4 drop-shadow-md" />
           </motion.div>
 
-          <h1 className="text-3xl font-bold text-gray-800 mb-3 tracking-tight">
-            Upload Your CV
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-800 mb-3 tracking-tight">Upload Your CV</h1>
           <p className="text-gray-600 mb-8">
-            Upload your <span className="font-semibold">PDF, DOCX, or TXT</span>{" "}
-            resume to find personalized job matches.
+            Upload your <span className="font-semibold">PDF, DOCX, or TXT</span> resume to find personalized job matches.
           </p>
 
           <form onSubmit={handleUpload}>
@@ -165,25 +152,14 @@ export default function UploadCVPage() {
               >
                 <p className="text-gray-600 mb-2">
                   {file ? (
-                    <span className="text-green-600 font-semibold">
-                      {file.name}
-                    </span>
+                    <span className="text-green-600 font-semibold">{file.name}</span>
                   ) : (
                     <>
-                      Drag & drop your file here or{" "}
-                      <span className="text-green-500 font-semibold">
-                        click to browse
-                      </span>
+                      Drag & drop your file here or <span className="text-green-500 font-semibold">click to browse</span>
                     </>
                   )}
                 </p>
-                <input
-                  id="file"
-                  type="file"
-                  accept=".pdf,.doc,.docx,.txt"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
+                <input id="file" type="file" accept=".pdf,.doc,.docx,.txt" onChange={handleFileChange} className="hidden" />
               </label>
             </div>
 
@@ -193,9 +169,7 @@ export default function UploadCVPage() {
               type="submit"
               disabled={uploading}
               className={`w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-xl font-semibold transition-all shadow-md ${
-                uploading
-                  ? "opacity-70 cursor-not-allowed"
-                  : "hover:shadow-lg hover:from-green-600 hover:to-green-700"
+                uploading ? "opacity-70 cursor-not-allowed" : "hover:shadow-lg hover:from-green-600 hover:to-green-700"
               }`}
             >
               {uploading ? "Uploading..." : "Upload CV"}
@@ -207,11 +181,7 @@ export default function UploadCVPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className={`mt-6 text-sm font-medium ${
-                message.startsWith("✅")
-                  ? "text-green-600"
-                  : message.startsWith("⚠️")
-                  ? "text-yellow-600"
-                  : "text-red-600"
+                message.startsWith("✅") ? "text-green-600" : message.startsWith("⚠️") ? "text-yellow-600" : "text-red-600"
               }`}
             >
               {message}
@@ -219,17 +189,19 @@ export default function UploadCVPage() {
           )}
         </motion.div>
 
-        {/* Floating Decorative Bubbles */}
-        <motion.div
-          className="absolute bottom-10 right-10 w-20 h-20 bg-green-400 rounded-full blur-2xl opacity-40"
-          animate={{ y: [0, -10, 0], opacity: [0.3, 0.5, 0.3] }}
-          transition={{ duration: 5, repeat: Infinity }}
-        />
-        <motion.div
-          className="absolute top-10 left-10 w-32 h-32 bg-blue-400 rounded-full blur-3xl opacity-30"
-          animate={{ y: [0, 15, 0], opacity: [0.2, 0.4, 0.2] }}
-          transition={{ duration: 6, repeat: Infinity }}
-        />
+        {/* Floating Decorative Bubbles - client-only */}
+        <ClientOnly>
+          <motion.div
+            className="absolute bottom-10 right-10 w-20 h-20 bg-green-400 rounded-full blur-2xl opacity-40"
+            animate={{ y: [0, -10, 0], opacity: [0.3, 0.5, 0.3] }}
+            transition={{ duration: 5, repeat: Infinity }}
+          />
+          <motion.div
+            className="absolute top-10 left-10 w-32 h-32 bg-blue-400 rounded-full blur-3xl opacity-30"
+            animate={{ y: [0, 15, 0], opacity: [0.2, 0.4, 0.2] }}
+            transition={{ duration: 6, repeat: Infinity }}
+          />
+        </ClientOnly>
       </main>
     </div>
   );
