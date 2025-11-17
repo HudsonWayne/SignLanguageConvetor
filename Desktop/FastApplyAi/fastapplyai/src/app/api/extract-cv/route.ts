@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import pdfParser from "pdf-parse";
-import { readFileSync } from "fs";
 import { promises as fs } from "fs";
 import path from "path";
 import * as docx from "docx";
@@ -9,7 +8,7 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
-  const file: File | null = formData.get("file") as unknown as File;
+  const file: File = formData.get("file") as File;
 
   if (!file) {
     return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
@@ -18,28 +17,27 @@ export async function POST(request: Request) {
   const buffer = Buffer.from(await file.arrayBuffer());
   let text = "";
 
-  const fileType = file.name.split(".").pop();
+  const ext = file.name.split(".").pop()?.toLowerCase();
 
-  // --- PDF ---
-  if (fileType === "pdf") {
+  // PDF extraction
+  if (ext === "pdf") {
     const data = await pdfParser(buffer);
     text = data.text;
   }
 
-  // --- DOCX ---
-  else if (fileType === "docx") {
+  // DOCX extraction
+  else if (ext === "docx") {
     const tempPath = path.join("/tmp", file.name);
     await fs.writeFile(tempPath, buffer);
-    const doc = await docx.Packer.toText(tempPath);
-    text = doc;
+    const docText = await docx.Packer.toText(tempPath);
+    text = docText;
   }
 
-  // --- TXT ---
-  else if (fileType === "txt") {
+  // TXT extraction
+  else if (ext === "txt") {
     text = buffer.toString("utf-8");
   }
 
-  // Simple AI-like extraction (mock)
   const extracted = {
     name: extractName(text),
     email: extractEmail(text),
@@ -48,54 +46,48 @@ export async function POST(request: Request) {
     education: extractEducation(text),
   };
 
-  return NextResponse.json(extracted, { status: 200 });
+  return NextResponse.json(extracted);
 }
 
-// --- Extract Name ---
 function extractName(text: string) {
-  const nameMatch = text.match(/([A-Z][a-z]+\s[A-Z][a-z]+(\s[A-Z][a-z]+)?)/);
-  return nameMatch ? nameMatch[0] : "Not found";
+  const match = text.match(/([A-Z][a-z]+\s[A-Z][a-z]+)/);
+  return match ? match[0] : "Not Found";
 }
 
-// --- Extract Email ---
 function extractEmail(text: string) {
-  const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Z|a-z]{2,}/);
-  return emailMatch ? emailMatch[0] : "Not found";
+  const match = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+  return match ? match[0] : "Not Found";
 }
 
-// --- Extract Skills ---
 function extractSkills(text: string) {
-  const skillKeywords = [
-    "HTML","CSS","JavaScript","React","Next.js","Node.js","Python","Django","Java",
-    "SQL","PHP","Laravel","WordPress","CyberSecurity","UI/UX","Algorithms",
-    "Data Structures","Digital marketing","Twillio","TWILIO"
+  const skills = [
+    "HTML", "CSS", "JavaScript", "React", "Next.js", "Node.js", "Python",
+    "Django", "Java", "SQL", "MongoDB", "Tailwind", "Bootstrap", "Git",
+    "UI/UX", "Figma", "PHP", "Laravel", "TypeScript", "C#", "C++"
   ];
 
-  return skillKeywords.filter(skill =>
+  return skills.filter(skill =>
     text.toLowerCase().includes(skill.toLowerCase())
   );
 }
 
-// --- Extract Experience ---
 function extractExperience(text: string) {
   const lines = text.split("\n").filter(line =>
     line.toLowerCase().includes("experience") ||
-    line.toLowerCase().includes("worked") ||
     line.toLowerCase().includes("developer") ||
-    line.toLowerCase().includes("intern")
+    line.toLowerCase().includes("intern") ||
+    line.toLowerCase().includes("work")
   );
-
-  return lines.length ? lines.join(" ") : "No experience found";
+  return lines.join(" ").slice(0, 500) || "No experience found";
 }
 
-// --- Extract Education ---
 function extractEducation(text: string) {
   const lines = text.split("\n").filter(line =>
-    line.toLowerCase().includes("certificate") ||
     line.toLowerCase().includes("degree") ||
     line.toLowerCase().includes("college") ||
-    line.toLowerCase().includes("university")
+    line.toLowerCase().includes("university") ||
+    line.toLowerCase().includes("diploma") ||
+    line.toLowerCase().includes("certificate")
   );
-
-  return lines.length ? lines.join(" ") : "No education found";
+  return lines.join(" ").slice(0, 500) || "No education found";
 }
