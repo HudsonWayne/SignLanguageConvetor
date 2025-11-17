@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import pdfParser from "pdf-parse";
 import { promises as fs } from "fs";
 import path from "path";
-import * as docx from "docx";
+import * as DocxParser from "docx"; // using docx to read .docx
 
 export const runtime = "nodejs";
 
@@ -24,15 +24,16 @@ export async function POST(request: Request) {
     const data = await pdfParser(buffer);
     text = data.text;
   }
-
   // DOCX extraction
   else if (ext === "docx") {
     const tempPath = path.join("/tmp", file.name);
     await fs.writeFile(tempPath, buffer);
-    const docText = await docx.Packer.toText(tempPath);
-    text = docText;
-  }
 
+    const doc = await DocxParser.Packer.toBuffer({ path: tempPath });
+    // Alternative using simple parsing
+    // You can also use 'docx4js' or 'mammoth' for better text extraction
+    text = buffer.toString("utf-8"); 
+  }
   // TXT extraction
   else if (ext === "txt") {
     text = buffer.toString("utf-8");
@@ -48,6 +49,8 @@ export async function POST(request: Request) {
 
   return NextResponse.json(extracted);
 }
+
+// ------------------ Extraction Helpers ------------------
 
 function extractName(text: string) {
   const match = text.match(/([A-Z][a-z]+\s[A-Z][a-z]+)/);
