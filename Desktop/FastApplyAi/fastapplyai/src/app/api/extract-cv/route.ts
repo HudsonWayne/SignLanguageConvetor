@@ -10,7 +10,7 @@ const extract = require("pdf-text-extract");
 
 export const runtime = "nodejs";
 
-// Helper to reliably extract text from a PDF file path
+// Helper to extract text from a PDF file path
 function extractTextFromPdfFile(filePath: string): Promise<string> {
   return new Promise((resolve, reject) => {
     extract(filePath, { splitPages: false }, (err: any, text: string[]) => {
@@ -36,17 +36,13 @@ export async function POST(req: Request) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const ext = file.name.split(".").pop()?.toLowerCase();
-
     let text = "";
 
     if (ext === "pdf") {
-      // Write PDF to temp file
       const tempPath = path.join(os.tmpdir(), `upload-${Date.now()}.pdf`);
       await fs.writeFile(tempPath, buffer);
-
       text = await extractTextFromPdfFile(tempPath);
-
-      await fs.unlink(tempPath); // Delete temp file
+      await fs.unlink(tempPath);
 
       if (!text.trim()) {
         throw new Error("No text extracted from PDF. Ensure PDF is not empty or encrypted.");
