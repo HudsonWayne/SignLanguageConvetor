@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { createRequire } from "module";
+
 const require = createRequire(import.meta.url);
 const mammoth = require("mammoth");
-const pdfParse = require("pdf-parse"); // <-- Use this for PDFs!
+const pdfParse = require("pdf-parse"); // Use older version as above
 
 export const runtime = "nodejs";
 
@@ -21,7 +22,7 @@ export async function POST(req: Request) {
 
     if (ext === "pdf") {
       const data = await pdfParse(buffer);
-      text = data.text; // pdf-parse extracts text for you
+      text = data.text;
     } else if (ext === "txt") {
       text = buffer.toString("utf-8");
     } else if (ext === "docx") {
@@ -42,13 +43,14 @@ export async function POST(req: Request) {
     return NextResponse.json(extracted);
   } catch (err: any) {
     console.error("❌ ERROR in /api/extract-cv:", err);
-    return NextResponse.json({ error: "Failed to extract CV", details: err.message }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to extract CV", details: err.message },
+      { status: 500 }
+    );
   }
 }
 
-// -------------------------
 // Extraction Helpers
-// -------------------------
 function extractName(text: string) {
   const match = text.match(/([A-Z][a-z]+\s[A-Z][a-z]+)/);
   return match ? match[0] : "Not Found";
