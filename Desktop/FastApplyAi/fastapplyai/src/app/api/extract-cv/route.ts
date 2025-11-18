@@ -3,9 +3,18 @@ import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
 const mammoth = require("mammoth");
-const pdfParse = require("pdf-parse"); // Use older version as above
+const extract = require("pdf-text-extract");
 
 export const runtime = "nodejs";
+
+function extractTextFromPdf(buffer: Buffer): Promise<string> {
+  return new Promise((resolve, reject) => {
+    extract(buffer, { splitPages: false }, (err: any, text: string[]) => {
+      if (err) reject(err);
+      else resolve(text.join("\n"));
+    });
+  });
+}
 
 export async function POST(req: Request) {
   try {
@@ -21,8 +30,7 @@ export async function POST(req: Request) {
     let text = "";
 
     if (ext === "pdf") {
-      const data = await pdfParse(buffer);
-      text = data.text;
+      text = await extractTextFromPdf(buffer);
     } else if (ext === "txt") {
       text = buffer.toString("utf-8");
     } else if (ext === "docx") {
@@ -40,7 +48,7 @@ export async function POST(req: Request) {
       education: extractEducation(text),
     };
 
-    return NextResponse.json(extracted);
+    return NextResponse.json(extracted, { status: 200 });
   } catch (err: any) {
     console.error("❌ ERROR in /api/extract-cv:", err);
     return NextResponse.json(
