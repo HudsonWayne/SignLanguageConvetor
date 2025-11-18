@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { createRequire } from "module";
+import fs from "fs/promises";
+import path from "path";
+import os from "os";
 
 const require = createRequire(import.meta.url);
 const mammoth = require("mammoth");
@@ -7,10 +10,10 @@ const extract = require("pdf-text-extract");
 
 export const runtime = "nodejs";
 
-// Helper to reliably extract text from a PDF buffer
-function extractTextFromPdf(buffer: Buffer): Promise<string> {
+// Helper to reliably extract text from a PDF file path
+function extractTextFromPdfFile(filePath: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    extract(buffer, { type: 'buffer', splitPages: false }, (err: any, text: string[]) => {
+    extract(filePath, { splitPages: false }, (err: any, text: string[]) => {
       if (err) {
         console.error("PDF extraction failed:", err);
         reject(err);
@@ -21,6 +24,7 @@ function extractTextFromPdf(buffer: Buffer): Promise<string> {
   });
 }
 
+// ------------------- API Route -------------------
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
@@ -32,18 +36,23 @@ export async function POST(req: Request) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const ext = file.name.split(".").pop()?.toLowerCase();
+
     let text = "";
 
-    // PDF extraction (requires pdftotext installed on your OS)
     if (ext === "pdf") {
-      text = await extractTextFromPdf(buffer);
+      // Write PDF to temp file
+      const tempPath = path.join(os.tmpdir(), `upload-${Date.now()}.pdf`);
+      await fs.writeFile(tempPath, buffer);
+
+      text = await extractTextFromPdfFile(tempPath);
+
+      await fs.unlink(tempPath); // Delete temp file
+
       if (!text.trim()) {
-        throw new Error("No text extracted from PDF. Ensure pdftotext is installed, and PDF is not encrypted/empty.");
+        throw new Error("No text extracted from PDF. Ensure PDF is not empty or encrypted.");
       }
-    // TXT
     } else if (ext === "txt") {
       text = buffer.toString("utf-8");
-    // DOCX
     } else if (ext === "docx") {
       const result = await mammoth.extractRawText({ buffer });
       text = result.value;
@@ -69,15 +78,17 @@ export async function POST(req: Request) {
   }
 }
 
-// ------- Extraction Helper Functions -------
+// ------------------- Helper Functions -------------------
 function extractName(text: string) {
   const match = text.match(/([A-Z][a-z]+\s[A-Z][a-z]+)/);
   return match ? match[0] : "Not Found";
 }
+
 function extractEmail(text: string) {
   const match = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
   return match ? match[0] : "Not Found";
 }
+
 function extractSkills(text: string) {
   const skills = [
     "HTML","CSS","JavaScript","React","Next.js","Node.js","Python",
@@ -86,6 +97,7 @@ function extractSkills(text: string) {
   ];
   return skills.filter(skill => text.toLowerCase().includes(skill.toLowerCase()));
 }
+
 function extractExperience(text: string) {
   const lines = text.split("\n").filter(line =>
     line.toLowerCase().includes("experience") ||
@@ -95,6 +107,7 @@ function extractExperience(text: string) {
   );
   return lines.join(" ").slice(0, 500) || "No experience found";
 }
+
 function extractEducation(text: string) {
   const lines = text.split("\n").filter(line =>
     line.toLowerCase().includes("degree") ||
