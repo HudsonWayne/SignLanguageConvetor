@@ -1,12 +1,6 @@
 import { NextResponse } from "next/server";
-import { createRequire } from "module";
-import fs from "fs";
-import path from "path";
-
-// Node-compatible PDF parser
-const require = createRequire(import.meta.url);
-const mammoth = require("mammoth");
-const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js");
+import pdfParse from "pdf-parse";
+import mammoth from "mammoth";
 
 export const runtime = "nodejs";
 
@@ -25,17 +19,9 @@ export async function POST(req: Request) {
     let text = "";
 
     if (ext === "pdf") {
-      // Load PDF using pdfjs-dist
-      const loadingTask = pdfjsLib.getDocument({ data: buffer });
-      const pdf = await loadingTask.promise;
-      let pdfText = "";
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        const strings = content.items.map((item: any) => item.str);
-        pdfText += strings.join(" ") + "\n";
-      }
-      text = pdfText;
+      // Use pdf-parse (Node.js compatible)
+      const data = await pdfParse(buffer);
+      text = data.text;
     } else if (ext === "txt") {
       text = buffer.toString("utf-8");
     } else if (ext === "docx") {
