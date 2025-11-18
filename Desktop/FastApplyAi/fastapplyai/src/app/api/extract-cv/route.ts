@@ -1,19 +1,17 @@
 import { NextResponse } from "next/server";
 import { createRequire } from "module";
+import fs from "fs";
+import path from "path";
+
+// Node-compatible PDF parser
+const require = createRequire(import.meta.url);
+const mammoth = require("mammoth");
+const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js");
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
-    const require = createRequire(import.meta.url);
-    const pdfParse = require("pdf-parse");
-    let mammoth;
-    try {
-      mammoth = require("mammoth"); // Only if installed
-    } catch {
-      mammoth = null;
-    }
-
     const formData = await req.formData();
     const file = formData.get("file") as File;
 
@@ -27,14 +25,20 @@ export async function POST(req: Request) {
     let text = "";
 
     if (ext === "pdf") {
-      const data = await pdfParse(buffer);
-      text = data.text;
+      // Load PDF using pdfjs-dist
+      const loadingTask = pdfjsLib.getDocument({ data: buffer });
+      const pdf = await loadingTask.promise;
+      let pdfText = "";
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        const strings = content.items.map((item: any) => item.str);
+        pdfText += strings.join(" ") + "\n";
+      }
+      text = pdfText;
     } else if (ext === "txt") {
       text = buffer.toString("utf-8");
     } else if (ext === "docx") {
-      if (!mammoth) {
-        return NextResponse.json({ error: "DOCX parsing requires 'mammoth' module" }, { status: 500 });
-      }
       const result = await mammoth.extractRawText({ buffer });
       text = result.value;
     } else {
