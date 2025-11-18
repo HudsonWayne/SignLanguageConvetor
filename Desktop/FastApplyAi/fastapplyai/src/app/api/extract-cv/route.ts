@@ -1,11 +1,19 @@
 import { NextResponse } from "next/server";
-import * as pdfParse from "pdf-parse";
-import mammoth from "mammoth";
+import { createRequire } from "module";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
+    const require = createRequire(import.meta.url);
+    const pdfParse = require("pdf-parse");
+    let mammoth;
+    try {
+      mammoth = require("mammoth"); // Only if installed
+    } catch {
+      mammoth = null;
+    }
+
     const formData = await req.formData();
     const file = formData.get("file") as File;
 
@@ -13,19 +21,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const buffer = Buffer.from(await file.arrayBuffer());
     const ext = file.name.split(".").pop()?.toLowerCase();
 
     let text = "";
 
     if (ext === "pdf") {
-      const data = await pdfParse.default(buffer);
+      const data = await pdfParse(buffer);
       text = data.text;
     } else if (ext === "txt") {
       text = buffer.toString("utf-8");
     } else if (ext === "docx") {
-      // Use Mammoth to safely extract DOCX text
+      if (!mammoth) {
+        return NextResponse.json({ error: "DOCX parsing requires 'mammoth' module" }, { status: 500 });
+      }
       const result = await mammoth.extractRawText({ buffer });
       text = result.value;
     } else {
