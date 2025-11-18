@@ -1,14 +1,10 @@
 import { NextResponse } from "next/server";
-import { createRequire } from "module";
-import { Document, Packer } from "docx";
-import * as docx from "docx";
+import * as pdfParse from "pdf-parse";
+import mammoth from "mammoth";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
-  const require = createRequire(import.meta.url);
-  const pdfParser = require("pdf-parse");
-
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File;
@@ -23,41 +19,19 @@ export async function POST(req: Request) {
 
     let text = "";
 
-    // -------------------------
-    // 📌 PDF PARSING
-    // -------------------------
     if (ext === "pdf") {
-      const data = await pdfParser(buffer);
+      const data = await pdfParse.default(buffer);
       text = data.text;
-    }
-
-    // -------------------------
-    // 📌 TXT PARSING
-    // -------------------------
-    else if (ext === "txt") {
+    } else if (ext === "txt") {
       text = buffer.toString("utf-8");
+    } else if (ext === "docx") {
+      // Use Mammoth to safely extract DOCX text
+      const result = await mammoth.extractRawText({ buffer });
+      text = result.value;
+    } else {
+      return NextResponse.json({ error: "Unsupported file type" }, { status: 400 });
     }
 
-    // -------------------------
-    // 📌 DOCX PARSING (REAL FIX)
-    // -------------------------
-    else if (ext === "docx") {
-      const doc = await docx.Packer.unpack(buffer);
-      text = doc._children
-        .map((block: any) => block._text || "")
-        .join("\n");
-    } 
-    
-    else {
-      return NextResponse.json(
-        { error: "Unsupported file type" },
-        { status: 400 }
-      );
-    }
-
-    // -------------------------
-    // 📌 EXTRACTION
-    // -------------------------
     const extracted = {
       name: extractName(text),
       email: extractEmail(text),
@@ -69,15 +43,12 @@ export async function POST(req: Request) {
     return NextResponse.json(extracted);
   } catch (err: any) {
     console.error("❌ ERROR in /api/extract-cv:", err);
-    return NextResponse.json(
-      { error: "Failed to extract CV", details: err.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to extract CV", details: err.message }, { status: 500 });
   }
 }
 
 // -------------------------
-// 📌 HELPERS
+// Extraction Helpers
 // -------------------------
 
 function extractName(text: string) {
@@ -92,11 +63,11 @@ function extractEmail(text: string) {
 
 function extractSkills(text: string) {
   const skills = [
-    "HTML", "CSS", "JavaScript", "React", "Next.js", "Node.js", "Python",
-    "Django", "Java", "SQL", "MongoDB", "Tailwind", "Bootstrap", "Git",
-    "UI/UX", "Figma", "PHP", "Laravel", "TypeScript", "C#", "C++"
+    "HTML","CSS","JavaScript","React","Next.js","Node.js","Python",
+    "Django","Java","SQL","MongoDB","Tailwind","Bootstrap","Git",
+    "UI/UX","Figma","PHP","Laravel","TypeScript","C#","C++"
   ];
-  return skills.filter(s => text.toLowerCase().includes(s.toLowerCase()));
+  return skills.filter(skill => text.toLowerCase().includes(skill.toLowerCase()));
 }
 
 function extractExperience(text: string) {
