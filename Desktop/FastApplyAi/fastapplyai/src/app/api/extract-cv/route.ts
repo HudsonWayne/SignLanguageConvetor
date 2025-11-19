@@ -1,71 +1,75 @@
+// src/app/api/extract-cv/route.ts
 import { NextResponse } from "next/server";
-import * as pdfParse from "pdf-parse";
-import mammoth from "mammoth";
+import { createRequire } from "module";
+import { getMongo } from "~/lib/mongodb";
 
 export const runtime = "nodejs";
 
-// ------------------- API Route -------------------
+// Use CommonJS modules via createRequire
+const require = createRequire(import.meta.url);
+const pdfParse = require("pdf-parse");
+const mammoth = require("mammoth");
+
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
-    const file = formData.get("file") as File;
+    const file = formData.get("file") as File | null;
 
-    if (!file) {
-      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
-    }
+    if (!file) return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const ext = file.name.split(".").pop()?.toLowerCase();
+    const ext = file.name.split(".").pop()?.toLowerCase() || "";
     let text = "";
 
-    // ---- PDF ----
+    // Extract text based on file type
     if (ext === "pdf") {
-      const data = await pdfParse.default(buffer); // <-- IMPORTANT
-      text = data.text;
-
-      if (!text.trim()) {
-        throw new Error("No text extracted from PDF. PDF may be empty or encrypted.");
-      }
-
-    // ---- TXT ----
+      const data = await pdfParse(buffer);
+      text = data?.text || "";
     } else if (ext === "txt") {
       text = buffer.toString("utf-8");
-
-    // ---- DOCX ----
     } else if (ext === "docx") {
       const result = await mammoth.extractRawText({ buffer });
-      text = result.value;
-
+      text = result.value || "";
     } else {
-      return NextResponse.json(
-        { error: "Unsupported file type" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Unsupported file type" }, { status: 400 });
     }
 
+    text = String(text);
+
+    // Parse data
     const extracted = {
       name: extractName(text),
       email: extractEmail(text),
       skills: extractSkills(text),
       experience: extractExperience(text),
       education: extractEducation(text),
+      rawText: text.slice(0, 10000) // limit snapshot
     };
 
-    return NextResponse.json(extracted, { status: 200 });
+    // Save to MongoDB
+    const { db } = await getMongo();
+    const collection = db.collection("cv_submissions");
+
+    const doc = { filename: file.name, uploadedAt: new Date(), ext, extracted };
+    const result = await collection.insertOne(doc);
+
+    return NextResponse.json({
+      ok: true,
+      insertedId: result.insertedId.toString(),
+      extracted,
+    });
 
   } catch (err: any) {
     console.error("❌ ERROR in /api/extract-cv:", err);
-    return NextResponse.json(
-      { error: "Failed to extract CV", details: err.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Server error", details: err.message }, { status: 500 });
   }
 }
 
 // ------------------- Helper Functions -------------------
+
 function extractName(text: string) {
-  const match = text.match(/([A-Z][a-z]+\s[A-Z][a-z]+)/);
-  return match ? match[0] : "Not Found";
+  const match = text.match(/\b([A-Z][a-z]{1,20}\s+[A-Z][a-z]{1,20})\b/);
+  return match ? match[1].trim() : "Not Found";
 }
 
 function extractEmail(text: string) {
@@ -75,32 +79,27 @@ function extractEmail(text: string) {
 
 function extractSkills(text: string) {
   const skills = [
-    "HTML","CSS","JavaScript","React","Next.js","Node.js","Python",
-    "Django","Java","SQL","MongoDB","Tailwind","Bootstrap","Git",
-    "UI/UX","Figma","PHP","Laravel","TypeScript","C#","C++"
+    "html","css","javascript","react","next.js","node.js","python","django","java",
+    "sql","mongodb","tailwind","bootstrap","git","figma","php","laravel","typescript","c#","c++",
+    "docker","kubernetes","aws","azure","gcp","rest","graphql"
   ];
-  return skills.filter(skill =>
-    text.toLowerCase().includes(skill.toLowerCase())
-  );
+  const lower = text.toLowerCase();
+  const found = Array.from(new Set(skills.filter(s => lower.includes(s))));
+  return found.length ? found : ["No skills found"];
 }
 
 function extractExperience(text: string) {
-  const lines = text.split("\n").filter(line =>
-    line.toLowerCase().includes("experience") ||
-    line.toLowerCase().includes("developer") ||
-    line.toLowerCase().includes("intern") ||
-    line.toLowerCase().includes("work")
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const hits = lines.filter(line =>
+    /experience|worked|employed|responsible for|years|month|intern|developer|engineer|consultant/i.test(line)
   );
-  return lines.join(" ").slice(0, 500) || "No experience found";
+  return hits.slice(0, 10).join(" ") || null;
 }
 
 function extractEducation(text: string) {
-  const lines = text.split("\n").filter(line =>
-    line.toLowerCase().includes("degree") ||
-    line.toLowerCase().includes("college") ||
-    line.toLowerCase().includes("university") ||
-    line.toLowerCase().includes("diploma") ||
-    line.toLowerCase().includes("certificate")
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const hits = lines.filter(line =>
+    /degree|university|college|bachelor|master|bs|ba|msc|phd|diploma|certificate/i.test(line)
   );
-  return lines.join(" ").slice(0, 500) || "No education found";
+  return hits.slice(0, 6).join(" ") || null;
 }
