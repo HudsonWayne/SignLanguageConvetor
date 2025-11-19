@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
-import fs from "fs/promises";
-import path from "path";
-import os from "os";
+import * as pdfParse from "pdf-parse";
 import mammoth from "mammoth";
-import pdf from "pdf-parse";
 
 export const runtime = "nodejs";
 
@@ -21,20 +18,29 @@ export async function POST(req: Request) {
     const ext = file.name.split(".").pop()?.toLowerCase();
     let text = "";
 
+    // ---- PDF ----
     if (ext === "pdf") {
-      const data = await pdf(buffer);
+      const data = await pdfParse.default(buffer); // <-- IMPORTANT
       text = data.text;
 
       if (!text.trim()) {
-        throw new Error("No text extracted from PDF. Ensure PDF is not empty or encrypted.");
+        throw new Error("No text extracted from PDF. PDF may be empty or encrypted.");
       }
+
+    // ---- TXT ----
     } else if (ext === "txt") {
       text = buffer.toString("utf-8");
+
+    // ---- DOCX ----
     } else if (ext === "docx") {
       const result = await mammoth.extractRawText({ buffer });
       text = result.value;
+
     } else {
-      return NextResponse.json({ error: "Unsupported file type" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Unsupported file type" },
+        { status: 400 }
+      );
     }
 
     const extracted = {
@@ -46,6 +52,7 @@ export async function POST(req: Request) {
     };
 
     return NextResponse.json(extracted, { status: 200 });
+
   } catch (err: any) {
     console.error("❌ ERROR in /api/extract-cv:", err);
     return NextResponse.json(
@@ -72,7 +79,9 @@ function extractSkills(text: string) {
     "Django","Java","SQL","MongoDB","Tailwind","Bootstrap","Git",
     "UI/UX","Figma","PHP","Laravel","TypeScript","C#","C++"
   ];
-  return skills.filter(skill => text.toLowerCase().includes(skill.toLowerCase()));
+  return skills.filter(skill =>
+    text.toLowerCase().includes(skill.toLowerCase())
+  );
 }
 
 function extractExperience(text: string) {
