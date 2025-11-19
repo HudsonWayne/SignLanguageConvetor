@@ -1,28 +1,11 @@
 import { NextResponse } from "next/server";
-import { createRequire } from "module";
 import fs from "fs/promises";
 import path from "path";
 import os from "os";
-
-const require = createRequire(import.meta.url);
-const mammoth = require("mammoth");
-const extract = require("pdf-text-extract");
+import mammoth from "mammoth";
+import pdf from "pdf-parse";
 
 export const runtime = "nodejs";
-
-// Helper to extract text from a PDF file path
-function extractTextFromPdfFile(filePath: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    extract(filePath, { splitPages: false }, (err: any, text: string[]) => {
-      if (err) {
-        console.error("PDF extraction failed:", err);
-        reject(err);
-      } else {
-        resolve(text.join("\n"));
-      }
-    });
-  });
-}
 
 // ------------------- API Route -------------------
 export async function POST(req: Request) {
@@ -39,10 +22,8 @@ export async function POST(req: Request) {
     let text = "";
 
     if (ext === "pdf") {
-      const tempPath = path.join(os.tmpdir(), `upload-${Date.now()}.pdf`);
-      await fs.writeFile(tempPath, buffer);
-      text = await extractTextFromPdfFile(tempPath);
-      await fs.unlink(tempPath);
+      const data = await pdf(buffer);
+      text = data.text;
 
       if (!text.trim()) {
         throw new Error("No text extracted from PDF. Ensure PDF is not empty or encrypted.");
