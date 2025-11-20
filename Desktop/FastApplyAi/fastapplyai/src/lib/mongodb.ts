@@ -1,59 +1,37 @@
-import NextAuth from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
-import GitHubProvider from "next-auth/providers/github";
-import AppleProvider from "next-auth/providers/apple";
-import MicrosoftProvider from "next-auth/providers/azure-ad";
-import CredentialsProvider from "next-auth/providers/credentials";
-import bcrypt from "bcryptjs";
-import { connectDB } from "@/lib/mongodb";
-import User from "@/lib/User";
+import mongoose from "mongoose";
 
-const handler = NextAuth({
-  providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-    GitHubProvider({
-      clientId: process.env.GITHUB_CLIENT_ID!,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-    }),
-    AppleProvider({
-      clientId: process.env.APPLE_ID!,
-      clientSecret: process.env.APPLE_SECRET!,
-    }),
-    MicrosoftProvider({
-      clientId: process.env.MICROSOFT_CLIENT_ID!,
-      clientSecret: process.env.MICROSOFT_CLIENT_SECRET!,
-    }),
-    CredentialsProvider({
-      name: "Credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
+const MONGODB_URI = process.env.MONGODB_URI;
 
-      async authorize(credentials) {
-        await connectDB();
+if (!MONGODB_URI) {
+  throw new Error("❌ Missing MONGODB_URI in .env");
+}
 
-        const user = await User.findOne({ email: credentials?.email });
-        if (!user) throw new Error("User not found");
+// Global cache so Hot Reloading doesn't create multiple DB connections
+let cached = (global as any).mongoose;
 
-        const isPasswordCorrect = await bcrypt.compare(
-          credentials!.password,
-          user.password || ""
-        );
+if (!cached) {
+  cached = (global as any).mongoose = { conn: null, promise: null };
+}
 
-        if (!isPasswordCorrect) throw new Error("Invalid password");
+export async function connectDB() {
+  if (cached.conn) {
+    return cached.conn; // Already connected
+  }
 
-        return user;
-      },
-    }),
-  ],
+  if (!cached.promise) {
+    cached.promise = mongoose
+      .connect(MONGODB_URI, {
+        dbName: "fastapply", // optional but recommended
+      })
+      .then((mongoose) => mongoose);
+  }
 
-  session: { strategy: "jwt" },
-  secret: process.env.NEXTAUTH_SECRET,
-  pages: { signIn: "/signin" },
-});
+  try {
+    cached.conn = await cached.promise;
+  } catch (error) {
+    cached.promise = null;
+    throw error;
+  }
 
-export { handler as GET, handler as POST };
+  return cached.conn;
+}
