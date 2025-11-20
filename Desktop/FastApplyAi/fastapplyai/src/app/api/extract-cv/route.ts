@@ -1,7 +1,8 @@
 // src/app/api/extract-cv/route.ts
 import { NextResponse } from "next/server";
 import { createRequire } from "module";
-import { getMongo } from "../../lib/mongodb"; // <-- use relative path
+import { connectDB } from "@/lib/mongodb"; // Use connectDB from mongodb.ts
+import mongoose from "mongoose";
 
 export const runtime = "nodejs";
 
@@ -9,12 +10,26 @@ const require = createRequire(import.meta.url);
 const pdfParse = require("pdf-parse");
 const mammoth = require("mammoth");
 
+// Define a CV schema
+const CVSchema = new mongoose.Schema(
+  {
+    filename: String,
+    uploadedAt: Date,
+    ext: String,
+    extracted: Object,
+  },
+  { collection: "cv_submissions" }
+);
+
+const CVModel = mongoose.models.CV || mongoose.model("CV", CVSchema);
+
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
 
-    if (!file) return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+    if (!file)
+      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const ext = file.name.split(".").pop()?.toLowerCase() || "";
@@ -24,7 +39,8 @@ export async function POST(req: Request) {
     if (ext === "pdf") {
       const data = await pdfParse(buffer);
       text = data?.text || "";
-      if (!text.trim()) throw new Error("No text extracted from PDF — file may be encrypted.");
+      if (!text.trim())
+        throw new Error("No text extracted from PDF — file may be encrypted.");
     }
     // ----------------- TXT -----------------
     else if (ext === "txt") {
@@ -52,24 +68,30 @@ export async function POST(req: Request) {
       skills: extractSkills(text),
       experience: extractExperience(text),
       education: extractEducation(text),
-      rawText: text.slice(0, 10000)
+      rawText: text.slice(0, 10000),
     };
 
     // ----------------- Save to MongoDB -----------------
-    const { db } = await getMongo();
-    const collection = db.collection("cv_submissions");
-    const doc = { filename: file.name, uploadedAt: new Date(), ext, extracted };
-    const result = await collection.insertOne(doc);
+    await connectDB(); // Connect Mongoose
+    const doc = new CVModel({
+      filename: file.name,
+      uploadedAt: new Date(),
+      ext,
+      extracted,
+    });
+    const result = await doc.save();
 
     return NextResponse.json({
       ok: true,
-      insertedId: result.insertedId.toString(),
+      insertedId: result._id.toString(),
       extracted,
     });
-
   } catch (err: any) {
     console.error("❌ API ERROR:", err);
-    return NextResponse.json({ error: "Server error", details: err.message }, { status: 500 });
+    return NextResponse.json(
+      { error: "Server error", details: err.message },
+      { status: 500 }
+    );
   }
 }
 
