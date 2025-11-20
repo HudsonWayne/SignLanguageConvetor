@@ -1,23 +1,22 @@
-// src/lib/mongodb.ts
-import { MongoClient, Db } from "mongodb";
-
-declare global {
-  // eslint-disable-next-line no-var
-  var _mongo: { client: MongoClient; db: Db } | undefined;
-}
+import mongoose from "mongoose";
 
 const MONGODB_URI = process.env.MONGODB_URI!;
-const MONGODB_DB = "fastapplyai";
 
-if (!MONGODB_URI) throw new Error("Please define MONGODB_URI in .env");
+if (!MONGODB_URI) {
+  throw new Error("❌ MONGODB_URI is missing in environment variables.");
+}
 
-export async function getMongo() {
-  if (global._mongo) return global._mongo;
+let isConnected = false;
 
-  const client = new MongoClient(MONGODB_URI);
-  await client.connect();
-  const db = client.db(MONGODB_DB);
+export async function connectDB() {
+  if (isConnected) return;
 
-  global._mongo = { client, db };
-  return global._mongo;
+  try {
+    const db = await mongoose.connect(MONGODB_URI);
+    isConnected = true;
+    console.log("✅ MongoDB Connected:", db.connection.host);
+  } catch (error) {
+    console.error("❌ Error connecting to MongoDB:", error);
+    throw error;
+  }
 }
