@@ -1,11 +1,10 @@
 // src/app/api/extract-cv/route.ts
 import { NextResponse } from "next/server";
 import { createRequire } from "module";
-import { getMongo } from "~/lib/mongodb";
+import { getMongo } from "../../lib/mongodb"; // <-- use relative path
 
 export const runtime = "nodejs";
 
-// Use CommonJS modules via createRequire
 const require = createRequire(import.meta.url);
 const pdfParse = require("pdf-parse");
 const mammoth = require("mammoth");
@@ -21,35 +20,44 @@ export async function POST(req: Request) {
     const ext = file.name.split(".").pop()?.toLowerCase() || "";
     let text = "";
 
-    // Extract text based on file type
+    // ----------------- PDF -----------------
     if (ext === "pdf") {
       const data = await pdfParse(buffer);
       text = data?.text || "";
-    } else if (ext === "txt") {
+      if (!text.trim()) throw new Error("No text extracted from PDF — file may be encrypted.");
+    }
+    // ----------------- TXT -----------------
+    else if (ext === "txt") {
       text = buffer.toString("utf-8");
-    } else if (ext === "docx") {
+    }
+    // ----------------- DOCX -----------------
+    else if (ext === "docx") {
       const result = await mammoth.extractRawText({ buffer });
       text = result.value || "";
-    } else {
-      return NextResponse.json({ error: "Unsupported file type" }, { status: 400 });
+    }
+    // ----------------- Unsupported -----------------
+    else {
+      return NextResponse.json(
+        { error: "Unsupported file type. Use PDF, DOCX, or TXT." },
+        { status: 400 }
+      );
     }
 
     text = String(text);
 
-    // Parse data
+    // ----------------- Extracted Data -----------------
     const extracted = {
       name: extractName(text),
       email: extractEmail(text),
       skills: extractSkills(text),
       experience: extractExperience(text),
       education: extractEducation(text),
-      rawText: text.slice(0, 10000) // limit snapshot
+      rawText: text.slice(0, 10000)
     };
 
-    // Save to MongoDB
+    // ----------------- Save to MongoDB -----------------
     const { db } = await getMongo();
     const collection = db.collection("cv_submissions");
-
     const doc = { filename: file.name, uploadedAt: new Date(), ext, extracted };
     const result = await collection.insertOne(doc);
 
@@ -60,7 +68,7 @@ export async function POST(req: Request) {
     });
 
   } catch (err: any) {
-    console.error("❌ ERROR in /api/extract-cv:", err);
+    console.error("❌ API ERROR:", err);
     return NextResponse.json({ error: "Server error", details: err.message }, { status: 500 });
   }
 }
