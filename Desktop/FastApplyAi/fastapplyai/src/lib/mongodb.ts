@@ -1,3 +1,4 @@
+// /lib/mongodb.ts
 import mongoose from "mongoose";
 
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -6,7 +7,7 @@ if (!MONGODB_URI) {
   throw new Error("❌ Missing MONGODB_URI in .env");
 }
 
-// Global cache so Hot Reloading doesn't create multiple DB connections
+// Prevent multiple connections in dev
 let cached = (global as any).mongoose;
 
 if (!cached) {
@@ -15,22 +16,20 @@ if (!cached) {
 
 export async function connectDB() {
   if (cached.conn) {
-    return cached.conn; // Already connected
+    return cached.conn; // already connected
   }
 
   if (!cached.promise) {
     cached.promise = mongoose
-      .connect(MONGODB_URI, {
-        dbName: "fastapply", // optional but recommended
-      })
+      .connect(MONGODB_URI, { dbName: "fastapply" })
       .then((mongoose) => mongoose);
   }
 
   try {
     cached.conn = await cached.promise;
-  } catch (error) {
+  } catch (err) {
     cached.promise = null;
-    throw error;
+    throw err;
   }
 
   return cached.conn;
