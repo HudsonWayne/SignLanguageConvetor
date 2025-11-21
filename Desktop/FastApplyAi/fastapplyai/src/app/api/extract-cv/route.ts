@@ -1,16 +1,13 @@
 // src/app/api/extract-cv/route.ts
 import { NextResponse } from "next/server";
-import { createRequire } from "module";
-import { connectDB } from "@/lib/mongodb"; // Use connectDB from mongodb.ts
 import mongoose from "mongoose";
+import { connectDB } from "@/lib/mongodb";
+import pdfParse from "pdf-parse";
+import mammoth from "mammoth";
 
 export const runtime = "nodejs";
 
-const require = createRequire(import.meta.url);
-const pdfParse = require("pdf-parse");
-const mammoth = require("mammoth");
-
-// Define a CV schema
+// ----------------- Schema -----------------
 const CVSchema = new mongoose.Schema(
   {
     filename: String,
@@ -23,6 +20,7 @@ const CVSchema = new mongoose.Schema(
 
 const CVModel = mongoose.models.CV || mongoose.model("CV", CVSchema);
 
+// ----------------- POST Handler -----------------
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
@@ -40,7 +38,7 @@ export async function POST(req: Request) {
       const data = await pdfParse(buffer);
       text = data?.text || "";
       if (!text.trim())
-        throw new Error("No text extracted from PDF — file may be encrypted.");
+        throw new Error("No text extracted from PDF (possibly encrypted)");
     }
     // ----------------- TXT -----------------
     else if (ext === "txt") {
@@ -72,13 +70,14 @@ export async function POST(req: Request) {
     };
 
     // ----------------- Save to MongoDB -----------------
-    await connectDB(); // Connect Mongoose
+    await connectDB();
     const doc = new CVModel({
       filename: file.name,
       uploadedAt: new Date(),
       ext,
       extracted,
     });
+
     const result = await doc.save();
 
     return NextResponse.json({
