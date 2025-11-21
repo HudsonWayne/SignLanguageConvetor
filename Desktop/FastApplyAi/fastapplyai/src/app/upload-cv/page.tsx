@@ -52,7 +52,6 @@ export default function UploadCVPage() {
       const formData = new FormData();
       formData.append("file", file);
 
-      // ✅ Correct API endpoint
       const res = await fetch("/api/extract-cv", {
         method: "POST",
         body: formData,
@@ -75,14 +74,14 @@ export default function UploadCVPage() {
         setMessage("✅ CV uploaded & parsed successfully!");
         setFile(null);
 
+        // Save parsed CV data for later pages
         localStorage.setItem("cvData", JSON.stringify(data));
 
-        // Redirect after 0.8s
         setTimeout(() => (window.location.href = "/cv-analysis"), 800);
       } else {
         setMessage("❌ Upload failed: " + (data.error || "Unknown error"));
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
       setMessage("❌ Upload failed. Please try again.");
     } finally {
