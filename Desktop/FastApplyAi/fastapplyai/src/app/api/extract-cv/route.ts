@@ -7,7 +7,7 @@ import { createRequire } from "module";
 export const runtime = "nodejs";
 
 const require = createRequire(import.meta.url);
-const pdfParse = require("pdf-parse"); // dynamically require to avoid internal test file
+const pdfParse = require("pdf-parse");
 const mammoth = require("mammoth");
 
 // Schema
