@@ -5,48 +5,35 @@ import JobCard from "@/components/JobCard";
 
 export default function FindJobsPage() {
   const [jobs, setJobs] = useState([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const skills = JSON.parse(localStorage.getItem("skills") || "[]");
 
-    async function search() {
-      const res = await fetch("/api/search-jobs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ skills }),
-      });
-
-      const data = await res.json();
-      setJobs(data.jobs || []);
-      setLoading(false);
-    }
-
-    search();
+    fetch("/api/search-jobs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ skills }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        console.log("API Response:", data);
+        setJobs(data.jobs || []); // ← FIXED
+      })
+      .catch((err) => console.error(err));
   }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-xl text-gray-600">
-        Searching the internet for jobs...
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-blue-50 p-10">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl font-black mb-4">Find Jobs for You</h1>
+    <div className="p-10 max-w-5xl mx-auto">
+      <h1 className="text-4xl font-bold mb-10">Jobs Based on Your Skills</h1>
 
-        <p className="text-gray-600 mb-8">
-          Found <b>{jobs.length}</b> jobs.
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {jobs.map((job, i) => (
-            <JobCard key={i} job={job} />
-          ))}
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {jobs.length === 0 ? (
+          <p>No jobs found...</p>
+        ) : (
+          jobs.map((job: any, index: number) => (
+            <JobCard key={index} job={job} />
+          ))
+        )}
       </div>
     </div>
   );
