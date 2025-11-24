@@ -16,9 +16,6 @@ export default function CVAnalysisPage() {
     }
 
     const parsed = JSON.parse(stored);
-
-    // Your backend returns { text: "extracted pdf text" }
-    // Here we process that text into data fields
     const text = parsed.text || "";
 
     setCv({
@@ -32,58 +29,62 @@ export default function CVAnalysisPage() {
 
   if (!cv) {
     return (
-      <div className="flex items-center justify-center min-h-screen text-gray-700">
+      <div className="flex items-center justify-center min-h-screen text-gray-700 text-xl animate-pulse">
         Loading CV analysis...
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#e8f3ff] p-10 text-gray-900 font-sans">
-      <div className="max-w-5xl mx-auto bg-white shadow-xl rounded-3xl p-10 border border-gray-200">
-        
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <FiUserCheck className="text-green-600 text-4xl" />
-          <h1 className="text-3xl font-bold">CV Analysis Complete</h1>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-10 font-sans">
+      <div className="max-w-5xl mx-auto bg-white/80 backdrop-blur-xl shadow-2xl rounded-3xl p-10 border border-white/40 animate-fadeIn">
+
+        {/* Title */}
+        <div className="flex items-center gap-4 mb-8">
+          <div className="p-3 bg-green-100 rounded-2xl shadow-sm">
+            <FiUserCheck className="text-green-700 text-3xl" />
+          </div>
+          <h1 className="text-4xl font-black text-gray-900 tracking-tight">
+            CV Analysis Complete
+          </h1>
         </div>
 
-        <p className="text-gray-600 mb-10">
-          Review the extracted information below
+        <p className="text-gray-600 mb-12 text-lg">
+          We analyzed your CV and extracted the most relevant information.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           
-          {/* Left Column */}
-          <div>
-            <h2 className="font-semibold text-gray-700 mb-2">Full Name</h2>
-            <p className="bg-gray-100 p-3 rounded-xl">{cv.fullName}</p>
+          {/* Left column */}
+          <div className="space-y-8">
 
-            <h2 className="font-semibold text-gray-700 mt-6 mb-2">Email Address</h2>
-            <p className="bg-gray-100 p-3 rounded-xl">{cv.email}</p>
+            <Section title="Full Name" content={cv.fullName} />
+            <Section title="Email Address" content={cv.email} />
 
-            <h2 className="font-semibold text-gray-700 mt-6 mb-2">Experience Summary</h2>
-            <p className="bg-gray-100 p-3 rounded-xl whitespace-pre-line">
-              {cv.experience}
-            </p>
+            <Section
+              title="Experience Summary"
+              content={cv.experience}
+              multiline
+            />
 
-            <h2 className="font-semibold text-gray-700 mt-6 mb-2">Education</h2>
-            <p className="bg-gray-100 p-3 rounded-xl whitespace-pre-line">
-              {cv.education}
-            </p>
+            <Section
+              title="Education"
+              content={cv.education}
+              multiline
+            />
           </div>
 
-          {/* Right Column – Skills */}
+          {/* Right column */}
           <div>
-            <h2 className="font-semibold text-gray-700 mb-2">
+            <h2 className="font-semibold text-gray-700 mb-3 text-xl">
               Extracted Skills ({cv.skills.length})
             </h2>
 
-            <div className="bg-gray-100 p-4 rounded-xl flex flex-wrap gap-2">
+            <div className="bg-gray-50 p-5 rounded-2xl shadow-inner border border-gray-200 flex flex-wrap gap-3">
               {cv.skills.map((skill: string, index: number) => (
                 <span
                   key={index}
-                  className="bg-green-200 text-green-900 px-3 py-1 rounded-full text-sm font-medium"
+                  className="bg-gradient-to-br from-green-200 to-green-300 text-green-900 px-4 py-1.5 rounded-full text-sm font-semibold shadow-sm hover:scale-105 transition-transform"
                 >
                   {skill}
                 </span>
@@ -92,25 +93,49 @@ export default function CVAnalysisPage() {
           </div>
         </div>
 
-        {/* Save & Apply Button */}
-        <div className="flex justify-center mt-10">
-          <button className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-xl font-semibold shadow-md">
+        {/* CTA Button */}
+        <div className="flex justify-center mt-14">
+          <button className="bg-green-600 hover:bg-green-700 text-white px-10 py-4 rounded-2xl text-lg font-bold shadow-xl transition-transform hover:scale-105">
             ✓ Save Profile & Find Jobs
           </button>
         </div>
 
         <Link
           href="/upload-cv"
-          className="flex items-center gap-2 text-gray-600 mt-8"
+          className="flex items-center gap-2 text-gray-600 mt-10 font-medium hover:text-gray-900 transition-colors"
         >
-          <FiArrowLeft /> Upload a different CV
+          <FiArrowLeft /> Upload another CV
         </Link>
       </div>
     </div>
   );
 }
 
-/* ---- SIMPLE TEXT EXTRACTION HELPERS ---- */
+/* ----- Beautiful Reusable Section Card ----- */
+function Section({
+  title,
+  content,
+  multiline = false,
+}: {
+  title: string;
+  content: string;
+  multiline?: boolean;
+}) {
+  return (
+    <div>
+      <h2 className="font-semibold text-gray-700 mb-2 text-xl">{title}</h2>
+      <p
+        className={`bg-gray-50 p-4 rounded-2xl border border-gray-200 shadow-inner text-gray-800 ${
+          multiline ? "whitespace-pre-line leading-relaxed" : ""
+        }`}
+      >
+        {content}
+      </p>
+    </div>
+  );
+}
+
+/* ---- Extraction Helpers ---- */
 
 function extractName(text: string) {
   const match = text.match(/[A-Z][A-Z\s]{4,40}/);
@@ -124,60 +149,29 @@ function extractEmail(text: string) {
 
 function extractSkills(text: string) {
   const skillsList = [
-    "HTML",
-    "CSS",
-    "JavaScript",
-    "React",
-    "Node.js",
-    "Next.js",
-    "Python",
-    "Django",
-    "PHP",
-    "Laravel",
-    "SQL",
-    "WordPress",
-    "Java",
-    "C++",
-    "UI/UX",
-    "Cybersecurity",
-    "Data Structures",
-    "Algorithms",
-    "Digital Marketing",
-    "DevOps",
-    "AWS",
-    "Docker",
-    "Tailwind",
+    "HTML", "CSS", "JavaScript", "React", "Node.js", "Next.js",
+    "Python", "Django", "PHP", "Laravel", "SQL", "WordPress",
+    "Java", "C++", "UI/UX", "Cybersecurity", "Data Structures",
+    "Algorithms", "Digital Marketing", "DevOps", "AWS",
+    "Docker", "Tailwind",
   ];
 
-  const cleanText = text.toLowerCase();
-
-  return skillsList.filter((skill) =>
-    cleanText.includes(skill.toLowerCase())
-  );
+  const lower = text.toLowerCase();
+  return skillsList.filter((skill) => lower.includes(skill.toLowerCase()));
 }
 
 function extractExperience(text: string) {
-  const sentences = text.split("\n").filter((line) =>
-    line.toLowerCase().includes("experience") ||
-    line.toLowerCase().includes("developer") ||
-    line.toLowerCase().includes("intern") ||
-    line.toLowerCase().includes("worked") ||
-    line.toLowerCase().includes("collaborated") ||
-    line.toLowerCase().includes("projects")
+  const lines = text.split("\n").filter((line) =>
+    ["experience", "developer", "intern", "worked", "collaborated", "projects"]
+      .some((keyword) => line.toLowerCase().includes(keyword))
   );
-
-  return sentences.slice(0, 5).join("\n") || "Experience not found";
+  return lines.slice(0, 5).join("\n") || "Experience not found";
 }
 
 function extractEducation(text: string) {
-  const sentences = text.split("\n").filter((line) =>
-    line.toLowerCase().includes("certificate") ||
-    line.toLowerCase().includes("degree") ||
-    line.toLowerCase().includes("college") ||
-    line.toLowerCase().includes("university") ||
-    line.toLowerCase().includes("education") ||
-    line.toLowerCase().includes("o'levels")
+  const lines = text.split("\n").filter((line) =>
+    ["certificate", "degree", "college", "university", "education", "o'levels"]
+      .some((keyword) => line.toLowerCase().includes(keyword))
   );
-
-  return sentences.slice(0, 5).join("\n") || "Education not found";
+  return lines.slice(0, 5).join("\n") || "Education not found";
 }
