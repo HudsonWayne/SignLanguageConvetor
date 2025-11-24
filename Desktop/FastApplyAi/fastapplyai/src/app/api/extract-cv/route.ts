@@ -1,45 +1,37 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
 import pdfParse from "pdf-parse";
-import { IncomingForm } from "formidable";
 
 export const runtime = "nodejs";
 
-// Disable Next.js body parser to handle FormData
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
 export async function POST(req: Request) {
-  const form = new IncomingForm();
+  try {
+    // Get FormData from the request (App Router way)
+    const formData = await req.formData();
+    const file = formData.get("file") as File | null;
 
-  return new Promise((resolve, reject) => {
-    form.parse(req as any, async (err, fields, files: any) => {
-      if (err) {
-        resolve(NextResponse.json({ error: "Failed to parse form" }, { status: 500 }));
-        return;
-      }
+    if (!file) {
+      return NextResponse.json(
+        { error: "No file uploaded" },
+        { status: 400 }
+      );
+    }
 
-      try {
-        const file = files.file;
-        if (!file) {
-          resolve(NextResponse.json({ error: "No file uploaded" }, { status: 400 }));
-          return;
-        }
+    // Convert File → Buffer
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
-        const data = fs.readFileSync(file.filepath);
+    // Parse PDF
+    const pdf = await pdfParse(buffer);
 
-        // Parse PDF text (you can add DOCX/TXT parsing here)
-        const pdfData = await pdfParse(data);
-
-        resolve(NextResponse.json({ text: pdfData.text }));
-      } catch (e) {
-        console.error(e);
-        resolve(NextResponse.json({ error: "Failed to process file" }, { status: 500 }));
-      }
+    return NextResponse.json({
+      text: pdf.text,
     });
-  });
+
+  } catch (error) {
+    console.error("Error parsing PDF:", error);
+    return NextResponse.json(
+      { error: "Failed to process file" },
+      { status: 500 }
+    );
+  }
 }
