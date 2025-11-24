@@ -1,20 +1,31 @@
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
-  const { skills } = await req.json();
+  try {
+    const { skills } = await req.json();
 
-  const query = skills.slice(0, 5).join(" ");
-
-  const url = `https://jsearch.p.rapidapi.com/search?query=${query}&num_pages=1`;
-
-  const res = await fetch(url, {
-    headers: {
-      "x-rapidapi-key": "https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch",
-      "x-rapidapi-host": "jsearch.p.rapidapi.com"
+    if (!skills || skills.length === 0) {
+      return NextResponse.json({ jobs: [] });
     }
-  });
 
-  const data = await res.json();
+    const query = skills.slice(0, 6).join(" ");
+    const url = `https://jsearch.p.rapidapi.com/search?query=${query}&num_pages=1`;
 
-  return NextResponse.json(data.data || []);
+    const res = await fetch(url, {
+      headers: {
+        "x-rapidapi-key": process.env.RAPID_API_KEY!, // ✅ correct key
+        "x-rapidapi-host": "jsearch.p.rapidapi.com"
+      }
+    });
+
+    const data = await res.json();
+
+    return NextResponse.json({ jobs: data.data || [] }); // ✅ correct return
+  } catch (error) {
+    console.error("Job API Error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch jobs" },
+      { status: 500 }
+    );
+  }
 }
