@@ -57,19 +57,30 @@ export default function UploadCVPage() {
         body: formData,
       });
 
-      const data = await res.json(); // parse JSON directly
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("Invalid JSON response from server.");
+      }
 
       if (res.ok) {
         console.log("Extracted CV data:", data);
-        setMessage("✅ CV uploaded & parsed successfully!");
-        setFile(null);
+
         localStorage.setItem("cvData", JSON.stringify(data));
-        setTimeout(() => (window.location.href = "/cv-analysis"), 800);
+
+        setMessage("✅ CV uploaded & parsed successfully!");
+
+        setTimeout(() => {
+          window.location.href = "/cv-analysis";
+        }, 800);
+
+        setFile(null);
       } else {
-        setMessage("❌ Upload failed: " + (data.error || "Unknown error"));
+        setMessage("❌ Upload failed: " + (data.error || "Unknown server error"));
       }
-    } catch (err: any) {
-      console.error(err);
+    } catch (error: any) {
+      console.error("Upload error:", error);
       setMessage("❌ Upload failed. Please try again.");
     } finally {
       setUploading(false);
