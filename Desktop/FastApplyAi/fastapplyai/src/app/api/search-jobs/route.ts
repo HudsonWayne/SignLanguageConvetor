@@ -4,42 +4,38 @@ export async function POST(req: Request) {
   try {
     const { skills } = await req.json();
 
-    // No skills? Return empty array
     if (!skills || skills.length === 0) {
       return NextResponse.json({ jobs: [] });
     }
 
-    // Create a search query string
-    const query = skills.slice(0, 6).join(" ");
+    const query = skills.slice(0, 5).join(" "); // top 5 skills ⇢ search query
 
     const url = `https://jsearch.p.rapidapi.com/search?query=${encodeURIComponent(
       query
-    )}&num_pages=1`;
+    )}&page=1&num_pages=1`;
 
-    const res = await fetch(url, {
+    const response = await fetch(url, {
       method: "GET",
       headers: {
-        "X-RapidAPI-Key": process.env.RAPID_API_KEY!, // MUST be a real key
-        "X-RapidAPI-Host": "jsearch.p.rapidapi.com",
+        "x-rapidapi-key": process.env.RAPIDAPI_KEY as string, // <-- PLACE IN .env
+        "x-rapidapi-host": "jsearch.p.rapidapi.com",
       },
     });
 
-    if (!res.ok) {
-      console.error("JSearch Error:", await res.text());
-      return NextResponse.json({ jobs: [] });
-    }
+    const data = await response.json();
 
-    const data = await res.json();
+    const jobs = (data.data || []).map((job: any, i: number) => ({
+      id: i + 1,
+      title: job.job_title,
+      company: job.employer_name,
+      location: job.job_city || job.job_country,
+      description: job.job_description?.slice(0, 200) + "...",
+      url: job.job_apply_link,
+    }));
 
-    // Always return an array to avoid "jobs.map is not a function"
-    return NextResponse.json({
-      jobs: Array.isArray(data.data) ? data.data : [],
-    });
+    return NextResponse.json({ jobs });
   } catch (error) {
-    console.error("Job API Error:", error);
-    return NextResponse.json(
-      { jobs: [] },
-      { status: 500 }
-    );
+    console.error("Job search error:", error);
+    return NextResponse.json({ jobs: [] });
   }
 }
