@@ -1,108 +1,113 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import {
-  FiUpload,
-  FiSearch,
-  FiFileText,
-  FiBell,
-  FiUser,
-  FiLogOut,
-} from "react-icons/fi";
 
 export default function FindJobsPage() {
-  const [user, setUser] = useState<string | null>(null);
+  const [skills, setSkills] = useState<string[]>([]);
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [country, setCountry] = useState("");
+  const [minSalary, setMinSalary] = useState("");
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
-    const email = localStorage.getItem("email");
-    if (email) {
-      setUser(email);
-    } else {
-      setUser("user@example.com");
+    const storedSkills = localStorage.getItem("skills");
+    if (storedSkills) {
+      setSkills(JSON.parse(storedSkills));
     }
   }, []);
 
-  const handleLogout = () => {
-    localStorage.clear();
-    window.location.href = "/signin";
+  const fetchJobs = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/search-jobs", {
+        method: "POST",
+        body: JSON.stringify({ skills, country, minSalary, page }),
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      setJobs(data.jobs || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  useEffect(() => {
+    if (skills.length > 0) fetchJobs();
+  }, [skills, country, minSalary, page]);
+
   return (
-    <div className="min-h-screen bg-[#f0f8ff] text-gray-900 font-sans">
-      {/* NAVBAR */}
-      <nav className="flex items-center justify-between px-4 sm:px-6 md:px-10 lg:px-20 xl:px-24 py-4 shadow-md bg-white sticky top-0 z-50 backdrop-blur-md bg-opacity-90 w-full max-w-[1920px] mx-auto">
-        <div className="flex items-center gap-2 text-lg sm:text-xl font-bold transition-all hover:scale-105">
-          <div className="bg-green-500 text-white rounded-md px-2 py-1 shadow-sm">
-            QA
-          </div>
-          <span className="tracking-wide whitespace-nowrap">QuickApplyAI</span>
-        </div>
+    <div className="min-h-screen bg-gray-100 p-6 font-sans">
+      <h1 className="text-3xl font-bold mb-4">Job Matches</h1>
 
-        <div className="flex items-center gap-4 lg:gap-8 text-sm text-gray-700 font-medium">
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-1 hover:text-green-600 transition-all"
-          >
-            <FiUser /> Dashboard
-          </Link>
-          <Link
-            href="/upload-cv"
-            className="flex items-center gap-1 hover:text-green-600 transition-all"
-          >
-            <FiUpload /> Upload CV
-          </Link>
-          <Link
-            href="/find-jobs"
-            className="flex items-center gap-1 bg-green-500 text-white px-3 py-2 rounded-md hover:bg-green-600 transition-all shadow-sm hover:shadow-md"
-          >
-            <FiSearch /> Find Jobs
-          </Link>
-          <Link
-            href="/applied"
-            className="flex items-center gap-1 hover:text-green-600 transition-all"
-          >
-            <FiFileText /> Applied Jobs
-          </Link>
-          <Link
-            href="/notifications"
-            className="flex items-center gap-1 hover:text-green-600 transition-all"
-          >
-            <FiBell /> Notifications
-          </Link>
-
-          <span className="hidden sm:block text-gray-500">
-            Welcome,{" "}
-            <span className="font-semibold text-gray-700">{user}</span>
-          </span>
-
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1 bg-gray-100 px-3 py-1.5 rounded-md hover:bg-gray-200 transition-all shadow-sm"
-          >
-            <FiLogOut /> Logout
-          </button>
-        </div>
-      </nav>
-
-      {/* MAIN CONTENT */}
-      <main className="flex flex-col items-center justify-center text-center py-32 px-6 sm:px-10 md:px-20">
-        <div className="text-gray-500 mb-6">
-          <FiSearch className="text-7xl sm:text-8xl mx-auto" />
-        </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-3">
-          Upload Your CV First
-        </h1>
-        <p className="text-gray-600 mb-8 max-w-md">
-          To find matching jobs, please upload and analyze your CV first.
-        </p>
-        <Link
-          href="/upload-cv"
-          className="bg-green-500 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-green-600 transition-all shadow-md hover:shadow-lg"
+      {/* Filters */}
+      <div className="flex gap-4 mb-6 flex-wrap">
+        <input
+          type="text"
+          placeholder="Filter by country"
+          value={country}
+          onChange={(e) => setCountry(e.target.value)}
+          className="p-2 border rounded"
+        />
+        <input
+          type="number"
+          placeholder="Minimum salary"
+          value={minSalary}
+          onChange={(e) => setMinSalary(e.target.value)}
+          className="p-2 border rounded"
+        />
+        <button
+          onClick={() => setPage(1)}
+          className="px-4 py-2 bg-green-500 text-white rounded"
         >
-          Upload CV
-        </Link>
-      </main>
+          Apply Filters
+        </button>
+      </div>
+
+      {loading ? (
+        <p>Loading jobs...</p>
+      ) : jobs.length === 0 ? (
+        <p>No jobs found for your skills yet.</p>
+      ) : (
+        <div className="space-y-4">
+          {jobs.map((job) => (
+            <div
+              key={job.id}
+              className="p-4 bg-white rounded shadow hover:shadow-md transition"
+            >
+              <a href={job.url} target="_blank" rel="noopener noreferrer">
+                <h2 className="font-bold text-lg">{job.title}</h2>
+              </a>
+              <p className="text-gray-600">{job.company}</p>
+              <p className="text-gray-500">{job.location}</p>
+              <p className="text-gray-700">{job.description}</p>
+              <p className="text-green-600 font-semibold">
+                Match: {job.matchPercent}%
+              </p>
+              <p className="text-gray-500">Salary: {job.salary}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      <div className="flex gap-2 justify-center mt-6">
+        <button
+          onClick={() => setPage((p) => Math.max(p - 1, 1))}
+          className="px-4 py-2 bg-gray-200 rounded"
+        >
+          Prev
+        </button>
+        <span className="px-4 py-2">{page}</span>
+        <button
+          onClick={() => setPage((p) => p + 1)}
+          className="px-4 py-2 bg-gray-200 rounded"
+        >
+          Next
+        </button>
+      </div>
     </div>
   );
 }
