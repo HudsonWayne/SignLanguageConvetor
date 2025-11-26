@@ -11,6 +11,7 @@ export default function SignInPage() {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
 
+  // Email/password sign-in
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -38,6 +39,7 @@ export default function SignInPage() {
     }
   };
 
+  // Social login placeholders
   const handleSocialSignIn = (provider: string) => {
     alert(`${provider} sign-in is not set up yet`);
   };
@@ -124,15 +126,8 @@ export default function SignInPage() {
   );
 }
 
-function AnimatedButton({
-  icon,
-  text,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  text: string;
-  onClick?: () => void;
-}) {
+// Animated button component
+function AnimatedButton({ icon, text, onClick }: { icon: React.ReactNode; text: string; onClick?: () => void }) {
   return (
     <button
       onClick={onClick}
