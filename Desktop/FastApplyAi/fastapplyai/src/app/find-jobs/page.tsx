@@ -4,7 +4,6 @@ import Link from "next/link";
 import {
   FiUpload,
   FiSearch,
-  FiCheckCircle,
   FiBell,
   FiUser,
   FiMenu,
@@ -25,6 +24,17 @@ export default function FindJobsPage() {
 
   const [mobileMenu, setMobileMenu] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  // Very important: avoid hydration mismatch
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true); // ensures client-only rendering
+  }, []);
+
+  if (!mounted) {
+    return <div className="min-h-screen bg-gray-100"></div>;
+  }
 
   useEffect(() => {
     const storedSkills = localStorage.getItem("skills");
@@ -130,21 +140,13 @@ export default function FindJobsPage() {
       {/* Mobile Dropdown */}
       {mobileMenu && (
         <div className="bg-white shadow-lg border-b p-5 space-y-4 text-gray-700">
-          <Link href="/dashboard" className="block">
-            Dashboard
-          </Link>
-          <Link href="/upload-cv" className="block">
-            Upload CV
-          </Link>
+          <Link href="/dashboard" className="block">Dashboard</Link>
+          <Link href="/upload-cv" className="block">Upload CV</Link>
           <Link href="/find-jobs" className="block font-semibold text-green-600">
             Find Jobs
           </Link>
-          <Link href="/applied" className="block">
-            Applied Jobs
-          </Link>
-          <Link href="/notifications" className="block">
-            Notifications
-          </Link>
+          <Link href="/applied" className="block">Applied Jobs</Link>
+          <Link href="/notifications" className="block">Notifications</Link>
           <Link href="/signin" className="block text-green-600 font-semibold">
             Sign In
           </Link>
@@ -157,8 +159,7 @@ export default function FindJobsPage() {
           Find Matching Jobs
         </h1>
         <p className="text-gray-700 mt-4 text-base sm:text-lg md:w-2/3 mx-auto leading-relaxed">
-          AI-powered job search based on your CV skills. Apply filters, explore
-          job matches, and boost your chances.
+          AI-powered job search based on your CV skills.
         </p>
       </div>
 
@@ -207,9 +208,7 @@ export default function FindJobsPage() {
         {loading ? (
           <p className="text-center text-lg text-gray-700">Loading jobs...</p>
         ) : jobs.length === 0 ? (
-          <p className="text-center text-lg text-gray-700">
-            No matching jobs found.
-          </p>
+          <p className="text-center text-lg text-gray-700">No matching jobs found.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {jobs.map((job) => (
