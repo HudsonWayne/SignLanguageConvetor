@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { load } from "cheerio";
 
-// --- Helper: safe fetch with headers
+// --- Safe fetch with headers
 async function safeFetch(url: string, opts: RequestInit = {}) {
   try {
     const headers = {
@@ -19,7 +19,7 @@ async function safeFetch(url: string, opts: RequestInit = {}) {
   }
 }
 
-// --- Helper: clean text
+// --- Clean text
 function txt(s: any) {
   return (s || "").toString().trim().replace(/\s+/g, " ");
 }
@@ -34,31 +34,26 @@ async function scrapeCvPeople(query: string) {
     const $ = load(html);
     const results: any[] = [];
 
-    $(".text-dark .job-card, .job-card, .job-listing, li.job").each((i, el) => {
+    $("article.job-card, .job-card, li.job").each((i, el) => {
       const el$ = $(el);
-      const title =
-        txt(el$.find("h4, h3, .job-title, .job-listing-title").first().text()) ||
-        txt(el$.find("a").first().text());
-      const company = txt(el$.find(".company, .employer, .company-name").first().text()) || "";
+      const title = txt(el$.find("h4, h3, .job-title, .job-listing-title").first().text()) || txt(el$.find("a").first().text());
+      const company = txt(el$.find(".company, .employer, .company-name").first().text());
       let link = el$.find("a").first().attr("href") || "";
       if (link && !link.startsWith("http")) link = "https://www.cvpeopleafrica.com" + link;
-      const location =
-        txt(el$.find(".location, .job-location, .job-meta").first().text()) || "Zimbabwe";
-      const desc = txt(el$.find(".description, .job-desc, .summary, p").first().text());
+      const location = txt(el$.find(".location, .job-location, .job-meta").first().text()) || "Zimbabwe";
+      const description = txt(el$.find(".description, .job-desc, .summary, p").first().text());
 
-      if (title) {
-        results.push({
-          id: `cvp-${i}-${Date.now()}`,
-          title,
-          company,
-          description: desc || title,
-          location,
-          url: link,
-          salary: "Not provided",
-          source: "CVPeople",
-          datePosted: null,
-        });
-      }
+      if (title) results.push({
+        id: `cvp-${i}-${Date.now()}`,
+        title,
+        company,
+        description: description || title,
+        location,
+        url: link,
+        salary: "Not provided",
+        source: "CVPeople",
+        datePosted: null
+      });
     });
 
     return results;
@@ -80,27 +75,23 @@ async function scrapeJobsZimbabwe(query: string) {
 
     $(".job, .job-item, .listing").each((i, el) => {
       const el$ = $(el);
-      const title =
-        txt(el$.find("h2, h3, .title, a").first().text()) ||
-        txt(el$.find("a").first().text());
+      const title = txt(el$.find("h2, h3, .title, a").first().text()) || txt(el$.find("a").first().text());
       const link = el$.find("a").first().attr("href") || "";
-      const company = txt(el$.find(".company, .employer").first().text()) || "";
+      const company = txt(el$.find(".company, .employer").first().text());
       const location = txt(el$.find(".location, .job-location").first().text()) || "Zimbabwe";
-      const desc = txt(el$.find(".excerpt, .summary, p").first().text());
+      const description = txt(el$.find(".excerpt, .summary, p").first().text());
 
-      if (title) {
-        results.push({
-          id: `jz-${i}-${Date.now()}`,
-          title,
-          company,
-          description: desc || title,
-          location,
-          url: link,
-          salary: "Not provided",
-          source: "JobsZimbabwe",
-          datePosted: null,
-        });
-      }
+      if (title) results.push({
+        id: `jz-${i}-${Date.now()}`,
+        title,
+        company,
+        description: description || title,
+        location,
+        url: link,
+        salary: "Not provided",
+        source: "JobsZimbabwe",
+        datePosted: null
+      });
     });
 
     return results;
@@ -122,27 +113,23 @@ async function scrapePindula(query: string) {
 
     $(".job, article, .job-item, .post").each((i, el) => {
       const el$ = $(el);
-      const title =
-        txt(el$.find("h2, a, .title").first().text()) ||
-        txt(el$.find("a").first().text());
+      const title = txt(el$.find("h2, a, .title").first().text()) || txt(el$.find("a").first().text());
       const link = el$.find("a").first().attr("href") || "";
-      const company = txt(el$.find(".company, .meta .company").first().text()) || "";
+      const company = txt(el$.find(".company, .meta .company").first().text());
       const location = txt(el$.find(".location, .meta .location").first().text()) || "Zimbabwe";
-      const desc = txt(el$.find(".entry-summary, p").first().text());
+      const description = txt(el$.find(".entry-summary, p").first().text());
 
-      if (title) {
-        results.push({
-          id: `pind-${i}-${Date.now()}`,
-          title,
-          company,
-          description: desc || title,
-          location,
-          url: link,
-          salary: "Not provided",
-          source: "Pindula",
-          datePosted: null,
-        });
-      }
+      if (title) results.push({
+        id: `pind-${i}-${Date.now()}`,
+        title,
+        company,
+        description: description || title,
+        location,
+        url: link,
+        salary: "Not provided",
+        source: "Pindula",
+        datePosted: null
+      });
     });
 
     return results;
@@ -152,7 +139,7 @@ async function scrapePindula(query: string) {
   }
 }
 
-// --- Compute match percentage
+// --- Compute match percent
 function computeMatchPercent(skills: string[], text: string) {
   if (!skills || skills.length === 0) return 0;
   const lower = (text || "").toLowerCase();
@@ -161,11 +148,10 @@ function computeMatchPercent(skills: string[], text: string) {
     if (!s) continue;
     if (lower.includes(s.toLowerCase())) count++;
   }
-  const percent = Math.round((count / skills.length) * 100);
-  return percent || 10;
+  return Math.max(Math.round((count / skills.length) * 100), 10);
 }
 
-// --- POST Route
+// --- POST API
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -173,21 +159,21 @@ export async function POST(req: Request) {
     const country: string = body.country || "Zimbabwe";
     const page = Number(body.page || 1);
 
-    if (!skills || skills.length === 0) return NextResponse.json({ jobs: [] });
+    if (!skills.length) return NextResponse.json({ jobs: [] });
 
     const query = skills.slice(0, 6).join(" ");
 
     const [cvp, jz, pind] = await Promise.all([
       scrapeCvPeople(query),
       scrapeJobsZimbabwe(query),
-      scrapePindula(query),
+      scrapePindula(query)
     ]);
 
     let results = [...cvp, ...jz, ...pind];
 
-    // Deduplicate by title + company
-    const seen = new Set<string>();
-    results = results.filter((job) => {
+    // Deduplicate
+    const seen = new Set();
+    results = results.filter(job => {
       const key = `${job.title}|${job.company}`;
       if (seen.has(key)) return false;
       seen.add(key);
@@ -195,20 +181,16 @@ export async function POST(req: Request) {
     });
 
     // Filter by country
-    if (country) {
-      const cLower = country.toLowerCase();
-      results = results.filter((job) =>
-        (job.location || "").toLowerCase().includes(cLower)
-      );
-    }
+    const cLower = country.toLowerCase();
+    results = results.filter(job => (job.location || "").toLowerCase().includes(cLower));
 
     // Compute match percent
-    results = results.map((job) => ({
+    results = results.map(job => ({
       ...job,
-      matchPercent: computeMatchPercent(skills, `${job.title} ${job.description}`),
+      matchPercent: computeMatchPercent(skills, `${job.title} ${job.description}`)
     }));
 
-    // Sort by matchPercent descending
+    // Sort by match percent
     results.sort((a, b) => (b.matchPercent || 0) - (a.matchPercent || 0));
 
     // Pagination
