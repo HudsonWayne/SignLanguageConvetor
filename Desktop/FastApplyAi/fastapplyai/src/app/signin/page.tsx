@@ -38,7 +38,6 @@ export default function SignInPage() {
     }
   };
 
-  // Placeholder for social login (non-functional here)
   const handleSocialSignIn = (provider: string) => {
     alert(`${provider} sign-in is not set up yet`);
   };
@@ -56,6 +55,7 @@ export default function SignInPage() {
           <h1 className="text-3xl font-semibold mb-1">Welcome to Hello App</h1>
           <p className="text-gray-500 mb-8">Sign in to continue</p>
 
+          {/* Social Buttons */}
           <div className="space-y-3 relative z-10">
             <AnimatedButton
               icon={<FcGoogle />}
@@ -69,12 +69,14 @@ export default function SignInPage() {
             />
           </div>
 
+          {/* Divider */}
           <div className="flex items-center my-6 text-gray-400">
             <hr className="flex-grow border-gray-300" />
             <span className="mx-3 text-sm">OR SIGN IN WITH EMAIL</span>
             <hr className="flex-grow border-gray-300" />
           </div>
 
+          {/* Email/Password Form */}
           <form onSubmit={handleEmailSignIn} className="space-y-3 relative z-10">
             <input
               type="email"
@@ -122,7 +124,15 @@ export default function SignInPage() {
   );
 }
 
-function AnimatedButton({ icon, text, onClick }: { icon: React.ReactNode; text: string; onClick?: () => void; }) {
+function AnimatedButton({
+  icon,
+  text,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  text: string;
+  onClick?: () => void;
+}) {
   return (
     <button
       onClick={onClick}
