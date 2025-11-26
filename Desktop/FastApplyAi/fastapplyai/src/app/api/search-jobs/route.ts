@@ -1,20 +1,25 @@
 // src/app/api/search-jobs/route.ts
 import { NextResponse } from "next/server";
-import { load } from "cheerio"; // ✅ ESM-compatible import
+import { load } from "cheerio";
 
-// Safe fetch with headers
+// --- Helper: safe fetch with headers
 async function safeFetch(url: string, opts: RequestInit = {}) {
-  const headers = {
-    "User-Agent":
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
-    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.9",
-    ...((opts && opts.headers) || {}),
-  };
-  return fetch(url, { ...opts, headers });
+  try {
+    const headers = {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
+      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9",
+      ...((opts && opts.headers) || {}),
+    };
+    return await fetch(url, { ...opts, headers });
+  } catch (err) {
+    console.error("Fetch error:", err);
+    return new Response("", { status: 500 });
+  }
 }
 
-// Text helper
+// --- Helper: clean text
 function txt(s: any) {
   return (s || "").toString().trim().replace(/\s+/g, " ");
 }
@@ -27,7 +32,6 @@ async function scrapeCvPeople(query: string) {
     if (!res.ok) return [];
     const html = await res.text();
     const $ = load(html);
-
     const results: any[] = [];
 
     $(".text-dark .job-card, .job-card, .job-listing, li.job").each((i, el) => {
@@ -35,8 +39,7 @@ async function scrapeCvPeople(query: string) {
       const title =
         txt(el$.find("h4, h3, .job-title, .job-listing-title").first().text()) ||
         txt(el$.find("a").first().text());
-      const company =
-        txt(el$.find(".company, .employer, .company-name").first().text()) || "";
+      const company = txt(el$.find(".company, .employer, .company-name").first().text()) || "";
       let link = el$.find("a").first().attr("href") || "";
       if (link && !link.startsWith("http")) link = "https://www.cvpeopleafrica.com" + link;
       const location =
@@ -73,7 +76,6 @@ async function scrapeJobsZimbabwe(query: string) {
     if (!res.ok) return [];
     const html = await res.text();
     const $ = load(html);
-
     const results: any[] = [];
 
     $(".job, .job-item, .listing").each((i, el) => {
@@ -116,7 +118,6 @@ async function scrapePindula(query: string) {
     if (!res.ok) return [];
     const html = await res.text();
     const $ = load(html);
-
     const results: any[] = [];
 
     $(".job, article, .job-item, .post").each((i, el) => {
@@ -151,7 +152,7 @@ async function scrapePindula(query: string) {
   }
 }
 
-// --- Simple match scoring
+// --- Compute match percentage
 function computeMatchPercent(skills: string[], text: string) {
   if (!skills || skills.length === 0) return 0;
   const lower = (text || "").toLowerCase();
@@ -164,12 +165,12 @@ function computeMatchPercent(skills: string[], text: string) {
   return percent || 10;
 }
 
-// --- Route handler
+// --- POST Route
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const skills: string[] = body.skills || [];
-    const country: string = body.country || "";
+    const country: string = body.country || "Zimbabwe";
     const page = Number(body.page || 1);
 
     if (!skills || skills.length === 0) return NextResponse.json({ jobs: [] });
@@ -184,7 +185,7 @@ export async function POST(req: Request) {
 
     let results = [...cvp, ...jz, ...pind];
 
-    // Unique by title + company
+    // Deduplicate by title + company
     const seen = new Set<string>();
     results = results.filter((job) => {
       const key = `${job.title}|${job.company}`;
@@ -193,7 +194,7 @@ export async function POST(req: Request) {
       return true;
     });
 
-    // Filter by country if provided
+    // Filter by country
     if (country) {
       const cLower = country.toLowerCase();
       results = results.filter((job) =>
@@ -201,13 +202,13 @@ export async function POST(req: Request) {
       );
     }
 
-    // Compute matchPercent
+    // Compute match percent
     results = results.map((job) => ({
       ...job,
       matchPercent: computeMatchPercent(skills, `${job.title} ${job.description}`),
     }));
 
-    // Sort by matchPercent
+    // Sort by matchPercent descending
     results.sort((a, b) => (b.matchPercent || 0) - (a.matchPercent || 0));
 
     // Pagination
@@ -215,7 +216,10 @@ export async function POST(req: Request) {
     const start = (page - 1) * perPage;
     const pageJobs = results.slice(start, start + perPage);
 
-    return NextResponse.json({ jobs: pageJobs });
+    const totalResults = results.length;
+    const totalPages = Math.ceil(totalResults / perPage);
+
+    return NextResponse.json({ jobs: pageJobs, totalResults, totalPages });
   } catch (err) {
     console.error(err);
     return NextResponse.json({ jobs: [] });
