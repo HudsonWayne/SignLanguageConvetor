@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { FcGoogle } from "react-icons/fc";
 import { FaApple } from "react-icons/fa";
@@ -15,17 +14,21 @@ export default function SignInPage() {
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
     try {
-      const result = await signIn("credentials", {
-        redirect: false,
-        email: form.email,
-        password: form.password,
+      const res = await fetch("/api/signin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
       });
 
-      if (result?.ok) {
+      const data = await res.json();
+
+      if (res.ok) {
+        alert(data.message);
         router.push("/dashboard");
       } else {
-        alert(result?.error || "Sign-in failed");
+        alert(data.message || "Sign-in failed");
       }
     } catch (err) {
       console.error(err);
@@ -35,10 +38,9 @@ export default function SignInPage() {
     }
   };
 
-  const handleSocialSignIn = async (provider: string) => {
-    setLoading(true);
-    await signIn(provider, { callbackUrl: "/dashboard" });
-    setLoading(false);
+  // Placeholder for social login (non-functional here)
+  const handleSocialSignIn = (provider: string) => {
+    alert(`${provider} sign-in is not set up yet`);
   };
 
   return (
@@ -58,12 +60,12 @@ export default function SignInPage() {
             <AnimatedButton
               icon={<FcGoogle />}
               text="Continue with Google"
-              onClick={() => handleSocialSignIn("google")}
+              onClick={() => handleSocialSignIn("Google")}
             />
             <AnimatedButton
               icon={<FaApple />}
               text="Continue with Apple"
-              onClick={() => handleSocialSignIn("apple")}
+              onClick={() => handleSocialSignIn("Apple")}
             />
           </div>
 
@@ -120,15 +122,7 @@ export default function SignInPage() {
   );
 }
 
-function AnimatedButton({
-  icon,
-  text,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  text: string;
-  onClick?: () => void;
-}) {
+function AnimatedButton({ icon, text, onClick }: { icon: React.ReactNode; text: string; onClick?: () => void; }) {
   return (
     <button
       onClick={onClick}
