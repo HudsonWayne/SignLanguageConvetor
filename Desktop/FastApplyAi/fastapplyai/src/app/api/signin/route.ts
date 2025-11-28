@@ -1,3 +1,4 @@
+// src/app/api/signin/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/user";
@@ -7,21 +8,16 @@ export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json();
 
-    if (!email || !password) {
+    if (!email || !password)
       return NextResponse.json({ message: "Email and password are required" }, { status: 400 });
-    }
 
     await connectDB();
 
     const user = await User.findOne({ email });
-    if (!user) {
-      return NextResponse.json({ message: "User not found, please sign up" }, { status: 404 });
-    }
+    if (!user) return NextResponse.json({ message: "User not found" }, { status: 404 });
 
-    const isPasswordCorrect = await bcrypt.compare(password, user.password || "");
-    if (!isPasswordCorrect) {
-      return NextResponse.json({ message: "Incorrect password" }, { status: 401 });
-    }
+    const isValid = await bcrypt.compare(password, user.password || "");
+    if (!isValid) return NextResponse.json({ message: "Incorrect password" }, { status: 401 });
 
     return NextResponse.json({ message: `Welcome back, ${user.name || "User"}` });
   } catch (error) {
