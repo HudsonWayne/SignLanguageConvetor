@@ -1,30 +1,35 @@
-// /pages/api/signup.ts
-import { NextApiRequest, NextApiResponse } from "next";
+// src/app/api/signup/route.ts
+import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/user";
 import bcrypt from "bcryptjs";
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "POST")
-    return res.status(405).json({ message: "Method not allowed" });
-
-  await connectDB();
-
-  const { name, email, password } = req.body;
-  if (!email || !password)
-    return res.status(400).json({ message: "Email and password are required" });
-
+export async function POST(req: NextRequest) {
   try {
+    const { name, email, password } = await req.json();
+
+    if (!email || !password) {
+      return NextResponse.json({ message: "Email and password are required" }, { status: 400 });
+    }
+
+    await connectDB();
+
     const existingUser = await User.findOne({ email });
-    if (existingUser)
-      return res.status(200).json({ message: "User already exists, please sign in" });
+    if (existingUser) {
+      return NextResponse.json({ message: "User already exists" }, { status: 400 });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, email, password: hashedPassword });
 
-    return res.status(201).json({ message: "Account created successfully", user });
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+    });
+
+    return NextResponse.json({ message: `User ${user.email} created successfully` });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Server error" });
+    console.error("Signup Error:", error);
+    return NextResponse.json({ message: "Server error" }, { status: 500 });
   }
 }
