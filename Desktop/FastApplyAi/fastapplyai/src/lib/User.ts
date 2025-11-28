@@ -1,9 +1,11 @@
-import mongoose, { Schema, models, model } from "mongoose";
+// src/models/user.ts
+import mongoose, { Schema, model, models } from "mongoose";
 
 const UserSchema = new Schema({
-  name: String,
+  name: { type: String },
   email: { type: String, required: true, unique: true },
-  password: String, // empty for OAuth users
+  password: { type: String },
+  createdAt: { type: Date, default: Date.now },
 });
 
 const User = models.User || model("User", UserSchema);

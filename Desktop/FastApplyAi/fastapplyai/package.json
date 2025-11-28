@@ -15,6 +15,7 @@
     "mammoth": "^1.11.0",
     "mongoose": "^8.20.1",
     "next": "latest",
+    "next-auth": "^4.24.13",
     "pdf-parse": "^1.1.4",
     "react": "latest",
     "react-dom": "latest",
