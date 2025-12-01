@@ -13,23 +13,29 @@ import {
 } from "react-icons/fi";
 import { useEffect, useState } from "react";
 
+interface Job {
+  id: string;
+  title: string;
+  company: string;
+  description: string;
+  location: string;
+  url: string;
+  salary: string;
+  matchPercent: number;
+}
+
 export default function FindJobsPage() {
-  // -----------------------------
-  // HOOKS (must always stay in SAME ORDER)
-  // -----------------------------
-
   const [skills, setSkills] = useState<string[]>([]);
-  const [jobs, setJobs] = useState<any[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
-
   const [country, setCountry] = useState("");
   const [minSalary, setMinSalary] = useState("");
   const [page, setPage] = useState(1);
 
   const [mobileMenu, setMobileMenu] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-
   const [mounted, setMounted] = useState(false);
+  const [totalPages, setTotalPages] = useState(1);
 
   // 1️⃣ Mount effect
   useEffect(() => {
@@ -49,27 +55,24 @@ export default function FindJobsPage() {
 
     handleResize();
     window.addEventListener("resize", handleResize);
-
     return () => window.removeEventListener("resize", handleResize);
   }, [mounted]);
 
   // 3️⃣ Fetch jobs
   const fetchJobs = async () => {
     setLoading(true);
-
     try {
       const res = await fetch("/api/search-jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ skills, country, minSalary, page }),
       });
-
       const data = await res.json();
       setJobs(data.jobs || []);
+      setTotalPages(data.totalPages || 1);
     } catch (err) {
       console.error("Job fetch error:", err);
     }
-
     setLoading(false);
   };
 
@@ -79,16 +82,10 @@ export default function FindJobsPage() {
     if (skills.length > 0) fetchJobs();
   }, [mounted, skills, country, minSalary, page]);
 
-  // -----------------------------
-  // SAFE CONDITIONAL RENDER AFTER HOOKS
-  // -----------------------------
   if (!mounted) {
     return <div className="min-h-screen bg-gray-100"></div>;
   }
 
-  // -----------------------------
-  // UI
-  // -----------------------------
   return (
     <div
       className={`min-h-screen bg-gradient-to-br from-purple-300 via-blue-200 to-green-200 text-gray-900 font-sans overflow-x-hidden bg-[length:200%_200%] ${
@@ -202,14 +199,12 @@ export default function FindJobsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {jobs.map((job) => (
               <div key={job.id} className="bg-white p-6 rounded-2xl shadow-lg">
-                <a href={job.url} target="_blank">
+                <a href={job.url} target="_blank" rel="noopener noreferrer">
                   <h2 className="text-xl font-bold hover:text-green-600">{job.title}</h2>
                 </a>
                 <p className="text-gray-600">{job.company}</p>
                 <p className="text-gray-500">{job.location}</p>
-
                 <p className="text-gray-700 mt-3">{job.description}</p>
-
                 <div className="mt-4 flex justify-between">
                   <span className="text-green-600 font-semibold">
                     Match: {job.matchPercent}%
@@ -226,6 +221,7 @@ export default function FindJobsPage() {
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             className="px-5 py-2 bg-white shadow-md border rounded-lg"
+            disabled={page <= 1}
           >
             Prev
           </button>
@@ -233,8 +229,9 @@ export default function FindJobsPage() {
           <span className="px-5 py-2 bg-green-500 text-white rounded-lg">{page}</span>
 
           <button
-            onClick={() => setPage((p) => p + 1)}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             className="px-5 py-2 bg-white shadow-md border rounded-lg"
+            disabled={page >= totalPages}
           >
             Next
           </button>
