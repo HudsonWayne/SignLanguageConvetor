@@ -8,5 +8,4 @@ const UserSchema = new Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-const User = models.User || model("User", UserSchema);
-export default User;
+export default models.User || model("User", UserSchema);
