@@ -32,28 +32,19 @@ export default function FindJobsPage() {
   const [minSalary, setMinSalary] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-
   const [mobileMenu, setMobileMenu] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   // Mount
   useEffect(() => setMounted(true), []);
 
-  // Load skills and check mobile
+  // Load skills
   useEffect(() => {
     if (!mounted) return;
-
     const storedSkills = localStorage.getItem("skills");
     if (storedSkills) setSkills(JSON.parse(storedSkills));
-
-    const handleResize = () => setIsMobile(window.innerWidth < 640);
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
   }, [mounted]);
 
-  // Fetch jobs from API
   const fetchJobs = async () => {
     setLoading(true);
     try {
@@ -79,14 +70,11 @@ export default function FindJobsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-300 via-blue-200 to-green-200 text-gray-900 font-sans overflow-x-hidden">
-      {/* NAVBAR */}
       <nav className="flex items-center justify-between px-6 py-4 shadow-md bg-white sticky top-0 z-50 backdrop-blur-md bg-opacity-90">
         <div className="flex items-center gap-2 font-bold text-lg">
           <div className="bg-green-500 text-white rounded-md px-2 py-1">QA</div>
           QuickApplyAI
         </div>
-
-        {/* Desktop */}
         <div className="hidden md:flex items-center gap-4 text-gray-700">
           <Link href="/dashboard" className="flex items-center gap-1 bg-green-500 text-white px-3 py-2 rounded-md">
             <FiUser /> Dashboard
@@ -105,8 +93,6 @@ export default function FindJobsPage() {
             Sign In
           </Link>
         </div>
-
-        {/* Mobile */}
         <button onClick={() => setMobileMenu(!mobileMenu)} className="md:hidden text-2xl">
           {mobileMenu ? <FiX /> : <FiMenu />}
         </button>
@@ -123,7 +109,6 @@ export default function FindJobsPage() {
         </div>
       )}
 
-      {/* Header */}
       <div className="text-center mt-14 sm:mt-20 mb-10 px-4">
         <h1 className="text-4xl md:text-5xl font-extrabold">Find Matching Jobs</h1>
         <p className="text-gray-700 mt-4 text-lg md:w-2/3 mx-auto">
@@ -131,7 +116,6 @@ export default function FindJobsPage() {
         </p>
       </div>
 
-      {/* Filters */}
       <div className="px-6 md:px-20 mb-10">
         <div className="bg-white p-6 rounded-2xl shadow-xl grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
@@ -167,7 +151,6 @@ export default function FindJobsPage() {
         </div>
       </div>
 
-      {/* Jobs */}
       <div className="px-6 md:px-20 pb-20">
         {loading ? (
           <p className="text-center text-lg text-gray-700">Loading jobs...</p>
@@ -192,7 +175,6 @@ export default function FindJobsPage() {
           </div>
         )}
 
-        {/* Pagination */}
         <div className="flex gap-3 justify-center mt-10">
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
