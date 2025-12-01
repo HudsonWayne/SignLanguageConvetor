@@ -19,9 +19,8 @@ interface Job {
   company: string;
   description: string;
   location: string;
-  url: string;
-  salary: string;
-  matchPercent: number;
+  link: string;
+  source: string;
 }
 
 export default function FindJobsPage() {
@@ -30,46 +29,65 @@ export default function FindJobsPage() {
   const [loading, setLoading] = useState(false);
   const [country, setCountry] = useState("");
   const [minSalary, setMinSalary] = useState("");
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // Mount
+  // mount
   useEffect(() => setMounted(true), []);
 
-  // Load skills
+  // load skills
   useEffect(() => {
     if (!mounted) return;
     const storedSkills = localStorage.getItem("skills");
     if (storedSkills) setSkills(JSON.parse(storedSkills));
   }, [mounted]);
 
+  // fetch real jobs
   const fetchJobs = async () => {
     setLoading(true);
+
     try {
-      const res = await fetch("/api/search-jobs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ skills, country, minSalary, page }),
-      });
+      const res = await fetch("/api/search-jobs", { method: "POST" });
       const data = await res.json();
-      setJobs(data.jobs || []);
-      setTotalPages(data.totalPages || 1);
+
+      // FILTER BY COUNTRY (client-side)
+      let filtered = data;
+
+      if (country.trim() !== "") {
+        filtered = filtered.filter((job: any) =>
+          job.location.toLowerCase().includes(country.toLowerCase())
+        );
+      }
+
+      setJobs(
+        filtered.map((job: any, index: number) => ({
+          id: index.toString(),
+          title: job.title,
+          company: job.company || "",
+          description: job.description || "",
+          location: job.location || "Remote",
+          link: job.link,
+          source: job.source,
+        }))
+      );
     } catch (err) {
       console.error("Job fetch error:", err);
     }
+
     setLoading(false);
   };
 
+  // fetch on load
   useEffect(() => {
-    if (mounted && skills.length > 0) fetchJobs();
-  }, [skills, country, minSalary, page, mounted]);
+    if (mounted) fetchJobs();
+  }, [mounted]);
 
-  if (!mounted) return <div className="min-h-screen bg-gray-100"></div>;
+  if (!mounted)
+    return <div className="min-h-screen bg-gray-100"></div>;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-300 via-blue-200 to-green-200 text-gray-900 font-sans overflow-x-hidden">
+      {/* NAVBAR */}
       <nav className="flex items-center justify-between px-6 py-4 shadow-md bg-white sticky top-0 z-50 backdrop-blur-md bg-opacity-90">
         <div className="flex items-center gap-2 font-bold text-lg">
           <div className="bg-green-500 text-white rounded-md px-2 py-1">QA</div>
@@ -98,6 +116,7 @@ export default function FindJobsPage() {
         </button>
       </nav>
 
+      {/* MOBILE MENU */}
       {mobileMenu && (
         <div className="bg-white shadow-lg border-b p-5 space-y-4 text-gray-700">
           <Link href="/dashboard">Dashboard</Link>
@@ -109,13 +128,15 @@ export default function FindJobsPage() {
         </div>
       )}
 
+      {/* HEADER */}
       <div className="text-center mt-14 sm:mt-20 mb-10 px-4">
         <h1 className="text-4xl md:text-5xl font-extrabold">Find Matching Jobs</h1>
         <p className="text-gray-700 mt-4 text-lg md:w-2/3 mx-auto">
-          AI-powered job search based on your CV skills.
+          Real-time job search from Jobicy, WorkAnywhere, and FindWork.
         </p>
       </div>
 
+      {/* FILTERS */}
       <div className="px-6 md:px-20 mb-10">
         <div className="bg-white p-6 rounded-2xl shadow-xl grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
@@ -125,7 +146,7 @@ export default function FindJobsPage() {
               value={country}
               onChange={(e) => setCountry(e.target.value)}
               className="p-3 border rounded-lg w-full"
-              placeholder="e.g. Harare, Zimbabwe"
+              placeholder="e.g. Zimbabwe, Remote"
             />
           </div>
 
@@ -136,13 +157,13 @@ export default function FindJobsPage() {
               value={minSalary}
               onChange={(e) => setMinSalary(e.target.value)}
               className="p-3 border rounded-lg w-full"
-              placeholder="e.g. 200"
+              placeholder="(API does not provide salary yet)"
             />
           </div>
 
           <div className="flex items-end">
             <button
-              onClick={() => setPage(1)}
+              onClick={fetchJobs}
               className="w-full bg-green-500 text-white p-3 rounded-lg"
             >
               Apply Filters
@@ -151,6 +172,7 @@ export default function FindJobsPage() {
         </div>
       </div>
 
+      {/* JOB RESULTS */}
       <div className="px-6 md:px-20 pb-20">
         {loading ? (
           <p className="text-center text-lg text-gray-700">Loading jobs...</p>
@@ -160,36 +182,21 @@ export default function FindJobsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {jobs.map((job) => (
               <div key={job.id} className="bg-white p-6 rounded-2xl shadow-lg">
-                <a href={job.url} target="_blank" rel="noopener noreferrer">
+                <a href={job.link} target="_blank" rel="noopener noreferrer">
                   <h2 className="text-xl font-bold hover:text-green-600">{job.title}</h2>
                 </a>
-                <p className="text-gray-600">{job.company}</p>
+                <p className="text-gray-600">{job.company || "Unknown Company"}</p>
                 <p className="text-gray-500">{job.location}</p>
-                <p className="text-gray-700 mt-3">{job.description}</p>
+                <p className="text-gray-700 mt-3">{job.description.substring(0, 200)}...</p>
+
                 <div className="mt-4 flex justify-between">
-                  <span className="text-green-600 font-semibold">Match: {job.matchPercent}%</span>
-                  <span className="text-gray-600">{job.salary}</span>
+                  <span className="text-green-600 font-semibold">{job.source}</span>
+                  <span className="text-gray-600">Remote / Flexible</span>
                 </div>
               </div>
             ))}
           </div>
         )}
-
-        <div className="flex gap-3 justify-center mt-10">
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page <= 1}
-            className="px-5 py-2 bg-white shadow-md border rounded-lg"
-          >Prev</button>
-
-          <span className="px-5 py-2 bg-green-500 text-white rounded-lg">{page}</span>
-
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page >= totalPages}
-            className="px-5 py-2 bg-white shadow-md border rounded-lg"
-          >Next</button>
-        </div>
       </div>
     </div>
   );
