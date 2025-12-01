@@ -1,43 +1,58 @@
 // src/app/api/auth/[...nextauth]/route.ts
 import NextAuth from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
+
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/user";
 
-const handler = NextAuth({
+export const authOptions = {
   providers: [
-    // Google OAuth
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
-    // Email/Password
+
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "text" },
+        email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+
+      async authorize(credentials: any) {
         await connectDB();
 
-        const user = await User.findOne({ email: credentials?.email }).lean();
-        if (!user) throw new Error("User not found");
+        const user = await User.findOne({ email: credentials.email });
 
-        const isValid = await bcrypt.compare(credentials!.password, user.password || "");
+        if (!user) {
+          throw new Error("User not found");
+        }
+
+        const isValid = await bcrypt.compare(
+          credentials.password,
+          user.password || ""
+        );
+
         if (!isValid) throw new Error("Invalid password");
 
-        return { id: user._id.toString(), name: user.name, email: user.email };
+        return {
+          id: user._id,
+          email: user.email,
+          name: user.name,
+        };
       },
     }),
   ],
-  pages: {
-    signIn: "/signin",
+
+  session: {
+    strategy: "jwt",
   },
-  session: { strategy: "jwt" },
+
   secret: process.env.NEXTAUTH_SECRET,
-});
+};
+
+const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };
