@@ -28,35 +28,28 @@ export default function FindJobsPage() {
   const [loading, setLoading] = useState(false);
   const [country, setCountry] = useState("");
   const [minSalary, setMinSalary] = useState("");
+  const [keyword, setKeyword] = useState("");
   const [mobileMenu, setMobileMenu] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
-  // ---- Fetch Jobs ----
   const fetchJobs = async () => {
     setLoading(true);
-
     try {
       const res = await fetch("/api/search-jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          country,
-          minSalary,
-        }),
+        body: JSON.stringify({ country, minSalary, keyword }),
       });
-
       const data = await res.json();
       setJobs(data);
     } catch (err) {
       console.error("Job fetch error:", err);
     }
-
     setLoading(false);
   };
 
-  // Fetch on page load
   useEffect(() => {
     if (mounted) fetchJobs();
   }, [mounted]);
@@ -115,12 +108,9 @@ export default function FindJobsPage() {
 
       {/* FILTERS */}
       <div className="px-6 md:px-20 mb-10">
-        <div className="bg-white p-6 rounded-2xl shadow-xl grid grid-cols-1 sm:grid-cols-3 gap-4">
-          
+        <div className="bg-white p-6 rounded-2xl shadow-xl grid grid-cols-1 sm:grid-cols-4 gap-4">
           <div>
-            <label className="text-gray-600 flex items-center gap-2 mb-1">
-              <FiMapPin /> Country
-            </label>
+            <label className="text-gray-600 flex items-center gap-2 mb-1"><FiMapPin /> Country</label>
             <input
               type="text"
               value={country}
@@ -131,15 +121,24 @@ export default function FindJobsPage() {
           </div>
 
           <div>
-            <label className="text-gray-600 flex items-center gap-2 mb-1">
-              <FiDollarSign /> Minimum Salary
-            </label>
+            <label className="text-gray-600 flex items-center gap-2 mb-1"><FiDollarSign /> Minimum Salary</label>
             <input
               type="number"
               value={minSalary}
               onChange={(e) => setMinSalary(e.target.value)}
               className="p-3 border rounded-lg w-full"
               placeholder="Only FindWork supports salary"
+            />
+          </div>
+
+          <div>
+            <label className="text-gray-600 flex items-center gap-2 mb-1">Keyword / Skill</label>
+            <input
+              type="text"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              className="p-3 border rounded-lg w-full"
+              placeholder="e.g. React, Marketing"
             />
           </div>
 
@@ -151,7 +150,6 @@ export default function FindJobsPage() {
               Apply Filters
             </button>
           </div>
-
         </div>
       </div>
 
@@ -160,43 +158,24 @@ export default function FindJobsPage() {
         {loading ? (
           <p className="text-center text-lg text-gray-700">Loading jobs...</p>
         ) : jobs.length === 0 ? (
-          <p className="text-center text-lg text-gray-700">
-            No matching jobs found.
-          </p>
+          <p className="text-center text-lg text-gray-700">No jobs found.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {jobs.map((job, index) => (
               <div key={index} className="bg-white p-6 rounded-2xl shadow-lg">
                 <a href={job.link} target="_blank" rel="noopener noreferrer">
-                  <h2 className="text-xl font-bold hover:text-green-600">
-                    {job.title}
-                  </h2>
+                  <h2 className="text-xl font-bold hover:text-green-600">{job.title}</h2>
                 </a>
-
-                <p className="text-gray-600">
-                  {job.company || "Unknown Company"}
-                </p>
-
+                <p className="text-gray-600">{job.company || "Unknown Company"}</p>
                 <p className="text-gray-500">{job.location}</p>
-
                 {job.salary ? (
-                  <p className="text-green-600 mt-2 font-semibold">
-                    Salary: ${job.salary}
-                  </p>
+                  <p className="text-green-600 mt-2 font-semibold">Salary: ${job.salary}</p>
                 ) : (
-                  <p className="text-gray-400 mt-2 text-sm">
-                    (No salary info)
-                  </p>
+                  <p className="text-gray-400 mt-2 text-sm">(No salary info)</p>
                 )}
-
-                <p className="text-gray-700 mt-3">
-                  {job.description.substring(0, 200)}...
-                </p>
-
+                <p className="text-gray-700 mt-3">{job.description.substring(0, 200)}...</p>
                 <div className="mt-4 flex justify-between">
-                  <span className="text-green-600 font-semibold">
-                    {job.source}
-                  </span>
+                  <span className="text-green-600 font-semibold">{job.source}</span>
                   <span className="text-gray-600">Remote / Flexible</span>
                 </div>
               </div>
