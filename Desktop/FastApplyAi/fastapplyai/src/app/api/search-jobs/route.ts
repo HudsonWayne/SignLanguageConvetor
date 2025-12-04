@@ -1,7 +1,7 @@
 // src/app/api/search-jobs/route.ts
 import { NextResponse } from "next/server";
 
-// ---- SAFE FETCH ----
+// Safe fetch helper
 async function safeFetch(url: string) {
   try {
     const res = await fetch(url, {
@@ -15,64 +15,50 @@ async function safeFetch(url: string) {
   }
 }
 
-// ---- SIMPLE RSS PARSER ----
+// Simple RSS parser
 function parseRSS(xml: string) {
   const items: any[] = [];
   const regex = /<item>([\s\S]*?)<\/item>/g;
   let match;
-
   while ((match = regex.exec(xml))) {
     const block = match[1];
-
     const get = (tag: string) => {
       const m = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`).exec(block);
       return m ? m[1].replace(/<!\[CDATA\[|\]\]>/g, "") : "";
     };
-
     items.push({
       title: get("title"),
       company: get("dc:creator") || "",
       link: get("link"),
       location: get("category") || "Remote",
       description: get("description"),
+      salary: null,
+      source: "RSS",
     });
   }
-
   return items;
 }
 
+// Main route
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
-  const country = body.country || "";
+  const country = body.country?.toLowerCase() || "";
   const minSalary = Number(body.minSalary || 0);
+  const keyword = body.keyword?.toLowerCase() || "";
 
-  // ----------
-  // 1. JOBICY (filtered: ONLY /job/ links)
-  // ----------
+  // 1️⃣ Jobicy
   const jobicyXML = await safeFetch("https://jobicy.com/feed");
-  let jobicyJobs = parseRSS(jobicyXML)
+  const jobicyJobs = parseRSS(jobicyXML)
     .filter((j) => j.link.includes("/job/"))
-    .map((j) => ({
-      ...j,
-      source: "Jobicy",
-      salary: null,
-    }));
+    .map((j) => ({ ...j, source: "Jobicy" }));
 
-  // ----------
-  // 2. WORKANYWHERE (filtered: ONLY /jobs/ links)
-  // ----------
+  // 2️⃣ WorkAnywhere
   const waXML = await safeFetch("https://workanywhere.pro/jobs/feed/");
-  let waJobs = parseRSS(waXML)
+  const waJobs = parseRSS(waXML)
     .filter((j) => j.link.includes("/jobs/"))
-    .map((j) => ({
-      ...j,
-      source: "WorkAnywhere",
-      salary: null,
-    }));
+    .map((j) => ({ ...j, source: "WorkAnywhere" }));
 
-  // ----------
-  // 3. FINDWORK — REAL API WITH SALARY
-  // ----------
+  // 3️⃣ FindWork (JSON API)
   let findworkJobs: any[] = [];
   try {
     const res = await fetch("https://findwork.dev/api/jobs/?remote=true", {
@@ -80,7 +66,6 @@ export async function POST(req: Request) {
       cache: "no-store",
     });
     const data = await res.json();
-
     findworkJobs = data.results.map((job: any) => ({
       title: job.role,
       company: job.company_name,
@@ -91,46 +76,37 @@ export async function POST(req: Request) {
       source: "FindWork",
     }));
   } catch (e) {
-    console.error("Findwork error", e);
+    console.error("FindWork error", e);
   }
 
-  // ----------
-  // MERGE ALL JOBS
-  // ----------
+  // Merge all jobs
   let allJobs = [...jobicyJobs, ...waJobs, ...findworkJobs];
 
-  // -----------------------------
-  // FILTER 1: COUNTRY
-  // -----------------------------
-  let filteredByCountry = allJobs;
-
-  if (country.trim() !== "") {
-    filteredByCountry = allJobs.filter((job) =>
-      job.location.toLowerCase().includes(country.toLowerCase())
+  // Filter by keyword
+  if (keyword) {
+    allJobs = allJobs.filter(
+      (job) =>
+        job.title.toLowerCase().includes(keyword) ||
+        job.description.toLowerCase().includes(keyword)
     );
-
-    // 🔥 fallback: if no match → show all jobs
-    if (filteredByCountry.length === 0) {
-      filteredByCountry = allJobs;
-    }
   }
 
-  // -----------------------------
-  // FILTER 2: MIN SALARY
-  // -----------------------------
-  let filteredBySalary = filteredByCountry;
+  // Filter by country (soft)
+  let filteredByCountry = country
+    ? allJobs.filter((job) => job.location.toLowerCase().includes(country))
+    : allJobs;
 
-  if (minSalary > 0) {
-    filteredBySalary = filteredByCountry.filter((job) => {
-      if (!job.salary) return false;
-      return Number(job.salary) >= minSalary;
-    });
+  if (filteredByCountry.length === 0) filteredByCountry = allJobs;
 
-    // 🔥 fallback: if empty → return jobs w/o salary instead
-    if (filteredBySalary.length === 0) {
-      filteredBySalary = filteredByCountry;
-    }
-  }
+  // Filter by minSalary (soft)
+  let filteredBySalary =
+    minSalary > 0
+      ? filteredByCountry.filter(
+          (job) => job.salary && Number(job.salary) >= minSalary
+        )
+      : filteredByCountry;
+
+  if (filteredBySalary.length === 0) filteredBySalary = filteredByCountry;
 
   return NextResponse.json(filteredBySalary);
 }
