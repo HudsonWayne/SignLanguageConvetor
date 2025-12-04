@@ -1,7 +1,7 @@
 // src/app/api/search-jobs/route.ts
 import { NextResponse } from "next/server";
 
-// Safe fetch helper
+// --- SAFE FETCH HELPER ---
 async function safeFetch(url: string) {
   try {
     const res = await fetch(url, {
@@ -15,7 +15,7 @@ async function safeFetch(url: string) {
   }
 }
 
-// Simple RSS parser
+// --- SIMPLE RSS PARSER ---
 function parseRSS(xml: string) {
   const items: any[] = [];
   const regex = /<item>([\s\S]*?)<\/item>/g;
@@ -39,26 +39,22 @@ function parseRSS(xml: string) {
   return items;
 }
 
-// Main API route
+// --- MAIN API ---
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const country = (body.country || "").toLowerCase();
   const minSalary = Number(body.minSalary || 0);
-  const keyword = (body.keyword || "").toLowerCase();
+  const keywords: string[] = body.keywords || []; // array of skills from CV
 
   // 1️⃣ Jobicy
   const jobicyXML = await safeFetch("https://jobicy.com/feed");
-  const jobicyJobs = parseRSS(jobicyXML)
-    .filter((j) => j.link.includes("/job/"))
-    .map((j) => ({ ...j, source: "Jobicy" }));
+  const jobicyJobs = parseRSS(jobicyXML).map((j) => ({ ...j, source: "Jobicy" }));
 
   // 2️⃣ WorkAnywhere
   const waXML = await safeFetch("https://workanywhere.pro/jobs/feed/");
-  const waJobs = parseRSS(waXML)
-    .filter((j) => j.link.includes("/jobs/"))
-    .map((j) => ({ ...j, source: "WorkAnywhere" }));
+  const waJobs = parseRSS(waXML).map((j) => ({ ...j, source: "WorkAnywhere" }));
 
-  // 3️⃣ FindWork (JSON API)
+  // 3️⃣ FindWork
   let findworkJobs: any[] = [];
   try {
     const res = await fetch("https://findwork.dev/api/jobs/?remote=true", {
@@ -82,24 +78,23 @@ export async function POST(req: Request) {
   // Merge all jobs
   let allJobs = [...jobicyJobs, ...waJobs, ...findworkJobs];
 
-  // Keyword filter
-  if (keyword) {
-    allJobs = allJobs.filter(
-      (job) =>
-        job.title.toLowerCase().includes(keyword) ||
-        job.description.toLowerCase().includes(keyword)
+  // --- Filter by keywords (skills from CV)
+  if (keywords.length > 0) {
+    allJobs = allJobs.filter((job) =>
+      keywords.some((skill) =>
+        job.title.toLowerCase().includes(skill.toLowerCase()) ||
+        job.description.toLowerCase().includes(skill.toLowerCase())
+      )
     );
   }
 
-  // Country filter (soft)
+  // --- Soft country filter
   let filtered = country
-    ? allJobs.filter((job) =>
-        job.location.toLowerCase().includes(country)
-      )
+    ? allJobs.filter((job) => job.location.toLowerCase().includes(country))
     : allJobs;
   if (filtered.length === 0) filtered = allJobs;
 
-  // Min salary filter (soft)
+  // --- Soft salary filter
   let filteredSalary =
     minSalary > 0
       ? filtered.filter((job) => job.salary && Number(job.salary) >= minSalary)
