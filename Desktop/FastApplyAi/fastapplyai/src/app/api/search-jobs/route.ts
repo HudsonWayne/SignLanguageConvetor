@@ -1,7 +1,7 @@
 // src/app/api/search-jobs/route.ts
 import { NextResponse } from "next/server";
 
-// --- UTIL: fetch text safely ---
+// ---- SAFE FETCH ----
 async function safeFetch(url: string) {
   try {
     const res = await fetch(url, {
@@ -15,7 +15,7 @@ async function safeFetch(url: string) {
   }
 }
 
-// --- UTIL: parse RSS into JS objects ---
+// ---- SIMPLE RSS PARSER ----
 function parseRSS(xml: string) {
   const items: any[] = [];
   const regex = /<item>([\s\S]*?)<\/item>/g;
@@ -35,30 +35,44 @@ function parseRSS(xml: string) {
       link: get("link"),
       location: get("category") || "Remote",
       description: get("description"),
-      source: "RSS",
     });
   }
 
   return items;
 }
 
-// --- MAIN ROUTE HANDLER ---
-export async function POST() {
-  // 1) Jobicy (remote jobs)
+export async function POST(req: Request) {
+  const body = await req.json().catch(() => ({}));
+  const country = body.country || "";
+  const minSalary = Number(body.minSalary || 0);
+
+  // ----------
+  // 1. JOBICY (filtered: ONLY /job/ links)
+  // ----------
   const jobicyXML = await safeFetch("https://jobicy.com/feed");
-  const jobicyJobs = parseRSS(jobicyXML).map((j) => ({
-    ...j,
-    source: "Jobicy",
-  }));
+  let jobicyJobs = parseRSS(jobicyXML)
+    .filter((j) => j.link.includes("/job/")) // remove articles
+    .map((j) => ({
+      ...j,
+      source: "Jobicy",
+      salary: null,
+    }));
 
-  // 2) WorkAnywhere (remote jobs)
+  // ----------
+  // 2. WORKANYWHERE (filtered: ONLY /jobs/ links)
+  // ----------
   const waXML = await safeFetch("https://workanywhere.pro/jobs/feed/");
-  const waJobs = parseRSS(waXML).map((j) => ({
-    ...j,
-    source: "WorkAnywhere",
-  }));
+  let waJobs = parseRSS(waXML)
+    .filter((j) => j.link.includes("/jobs/")) // remove blog posts
+    .map((j) => ({
+      ...j,
+      source: "WorkAnywhere",
+      salary: null,
+    }));
 
-  // 3) Findwork (JSON simple)
+  // ----------
+  // 3. FINDWORK — REAL API WITH SALARY
+  // ----------
   let findworkJobs: any[] = [];
   try {
     const res = await fetch("https://findwork.dev/api/jobs/?remote=true", {
@@ -66,20 +80,43 @@ export async function POST() {
       cache: "no-store",
     });
     const data = await res.json();
+
     findworkJobs = data.results.map((job: any) => ({
       title: job.role,
       company: job.company_name,
       location: job.location || "Remote",
       description: job.text,
       link: job.url,
-      source: "Findwork",
+      salary: job.salary || 0,
+      source: "FindWork",
     }));
   } catch (e) {
     console.error("Findwork error", e);
   }
 
-  // --- Combine all job sources ---
-  const allJobs = [...jobicyJobs, ...waJobs, ...findworkJobs];
+  // ----------
+  // MERGE ALL JOBS
+  // ----------
+  let allJobs = [...jobicyJobs, ...waJobs, ...findworkJobs];
+
+  // ----------
+  // FILTER BY COUNTRY (case-insensitive)
+  // ----------
+  if (country.trim() !== "") {
+    allJobs = allJobs.filter((job) =>
+      job.location.toLowerCase().includes(country.toLowerCase())
+    );
+  }
+
+  // ----------
+  // FILTER BY MINIMUM SALARY (only FindWork supports salary)
+  // ----------
+  if (minSalary > 0) {
+    allJobs = allJobs.filter((job) => {
+      if (!job.salary) return false;
+      return job.salary >= minSalary;
+    });
+  }
 
   return NextResponse.json(allJobs);
 }
