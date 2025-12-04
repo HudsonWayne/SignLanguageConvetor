@@ -14,17 +14,16 @@ import {
 import { useEffect, useState } from "react";
 
 interface Job {
-  id: string;
   title: string;
   company: string;
   description: string;
   location: string;
   link: string;
+  salary?: number | null;
   source: string;
 }
 
 export default function FindJobsPage() {
-  const [skills, setSkills] = useState<string[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
   const [country, setCountry] = useState("");
@@ -32,44 +31,24 @@ export default function FindJobsPage() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // mount
   useEffect(() => setMounted(true), []);
 
-  // load skills
-  useEffect(() => {
-    if (!mounted) return;
-    const storedSkills = localStorage.getItem("skills");
-    if (storedSkills) setSkills(JSON.parse(storedSkills));
-  }, [mounted]);
-
-  // fetch real jobs
+  // ----- Fetch jobs -----
   const fetchJobs = async () => {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/search-jobs", { method: "POST" });
+      const res = await fetch("/api/search-jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          country,
+          minSalary,
+        }),
+      });
+
       const data = await res.json();
-
-      // FILTER BY COUNTRY (client-side)
-      let filtered = data;
-
-      if (country.trim() !== "") {
-        filtered = filtered.filter((job: any) =>
-          job.location.toLowerCase().includes(country.toLowerCase())
-        );
-      }
-
-      setJobs(
-        filtered.map((job: any, index: number) => ({
-          id: index.toString(),
-          title: job.title,
-          company: job.company || "",
-          description: job.description || "",
-          location: job.location || "Remote",
-          link: job.link,
-          source: job.source,
-        }))
-      );
+      setJobs(data);
     } catch (err) {
       console.error("Job fetch error:", err);
     }
@@ -82,13 +61,13 @@ export default function FindJobsPage() {
     if (mounted) fetchJobs();
   }, [mounted]);
 
-  if (!mounted)
-    return <div className="min-h-screen bg-gray-100"></div>;
+  if (!mounted) return <div className="min-h-screen bg-gray-100"></div>;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-300 via-blue-200 to-green-200 text-gray-900 font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-purple-300 via-blue-200 to-green-200 text-gray-900 font-sans">
+
       {/* NAVBAR */}
-      <nav className="flex items-center justify-between px-6 py-4 shadow-md bg-white sticky top-0 z-50 backdrop-blur-md bg-opacity-90">
+      <nav className="flex items-center justify-between px-6 py-4 shadow-md bg-white sticky top-0 z-50">
         <div className="flex items-center gap-2 font-bold text-lg">
           <div className="bg-green-500 text-white rounded-md px-2 py-1">QA</div>
           QuickApplyAI
@@ -107,9 +86,6 @@ export default function FindJobsPage() {
           <Link href="/notifications" className="flex items-center gap-1 hover:text-green-600">
             <FiBell /> Notifications
           </Link>
-          <Link href="/signin" className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600">
-            Sign In
-          </Link>
         </div>
         <button onClick={() => setMobileMenu(!mobileMenu)} className="md:hidden text-2xl">
           {mobileMenu ? <FiX /> : <FiMenu />}
@@ -124,7 +100,6 @@ export default function FindJobsPage() {
           <Link href="/find-jobs" className="font-semibold text-green-600">Find Jobs</Link>
           <Link href="/applied">Applied Jobs</Link>
           <Link href="/notifications">Notifications</Link>
-          <Link href="/signin" className="text-green-600 font-semibold">Sign In</Link>
         </div>
       )}
 
@@ -132,7 +107,7 @@ export default function FindJobsPage() {
       <div className="text-center mt-14 sm:mt-20 mb-10 px-4">
         <h1 className="text-4xl md:text-5xl font-extrabold">Find Matching Jobs</h1>
         <p className="text-gray-700 mt-4 text-lg md:w-2/3 mx-auto">
-          Real-time job search from Jobicy, WorkAnywhere, and FindWork.
+          Real-time jobs from Jobicy, WorkAnywhere, and FindWork.
         </p>
       </div>
 
@@ -140,7 +115,9 @@ export default function FindJobsPage() {
       <div className="px-6 md:px-20 mb-10">
         <div className="bg-white p-6 rounded-2xl shadow-xl grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label className="text-gray-600 flex items-center gap-2 mb-1"><FiMapPin /> Country</label>
+            <label className="text-gray-600 flex items-center gap-2 mb-1">
+              <FiMapPin /> Country
+            </label>
             <input
               type="text"
               value={country}
@@ -151,13 +128,15 @@ export default function FindJobsPage() {
           </div>
 
           <div>
-            <label className="text-gray-600 flex items-center gap-2 mb-1"><FiDollarSign /> Minimum Salary</label>
+            <label className="text-gray-600 flex items-center gap-2 mb-1">
+              <FiDollarSign /> Minimum Salary
+            </label>
             <input
               type="number"
               value={minSalary}
               onChange={(e) => setMinSalary(e.target.value)}
               className="p-3 border rounded-lg w-full"
-              placeholder="(API does not provide salary yet)"
+              placeholder="Only FindWork supports salary"
             />
           </div>
 
@@ -180,14 +159,25 @@ export default function FindJobsPage() {
           <p className="text-center text-lg text-gray-700">No matching jobs found.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {jobs.map((job) => (
-              <div key={job.id} className="bg-white p-6 rounded-2xl shadow-lg">
+            {jobs.map((job, index) => (
+              <div key={index} className="bg-white p-6 rounded-2xl shadow-lg">
                 <a href={job.link} target="_blank" rel="noopener noreferrer">
                   <h2 className="text-xl font-bold hover:text-green-600">{job.title}</h2>
                 </a>
                 <p className="text-gray-600">{job.company || "Unknown Company"}</p>
                 <p className="text-gray-500">{job.location}</p>
-                <p className="text-gray-700 mt-3">{job.description.substring(0, 200)}...</p>
+
+                {job.salary ? (
+                  <p className="text-green-600 mt-2 font-semibold">
+                    Salary: ${job.salary}
+                  </p>
+                ) : (
+                  <p className="text-gray-400 mt-2 text-sm">(No salary info)</p>
+                )}
+
+                <p className="text-gray-700 mt-3">
+                  {job.description.substring(0, 200)}...
+                </p>
 
                 <div className="mt-4 flex justify-between">
                   <span className="text-green-600 font-semibold">{job.source}</span>
@@ -198,6 +188,7 @@ export default function FindJobsPage() {
           </div>
         )}
       </div>
+
     </div>
   );
 }
