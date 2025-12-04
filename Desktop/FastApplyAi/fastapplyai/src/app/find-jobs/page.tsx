@@ -33,7 +33,7 @@ export default function FindJobsPage() {
 
   useEffect(() => setMounted(true), []);
 
-  // ----- Fetch jobs -----
+  // ---- Fetch Jobs ----
   const fetchJobs = async () => {
     setLoading(true);
 
@@ -56,7 +56,7 @@ export default function FindJobsPage() {
     setLoading(false);
   };
 
-  // fetch on load
+  // Fetch on page load
   useEffect(() => {
     if (mounted) fetchJobs();
   }, [mounted]);
@@ -72,6 +72,7 @@ export default function FindJobsPage() {
           <div className="bg-green-500 text-white rounded-md px-2 py-1">QA</div>
           QuickApplyAI
         </div>
+
         <div className="hidden md:flex items-center gap-4 text-gray-700">
           <Link href="/dashboard" className="flex items-center gap-1 bg-green-500 text-white px-3 py-2 rounded-md">
             <FiUser /> Dashboard
@@ -87,6 +88,7 @@ export default function FindJobsPage() {
             <FiBell /> Notifications
           </Link>
         </div>
+
         <button onClick={() => setMobileMenu(!mobileMenu)} className="md:hidden text-2xl">
           {mobileMenu ? <FiX /> : <FiMenu />}
         </button>
@@ -114,6 +116,7 @@ export default function FindJobsPage() {
       {/* FILTERS */}
       <div className="px-6 md:px-20 mb-10">
         <div className="bg-white p-6 rounded-2xl shadow-xl grid grid-cols-1 sm:grid-cols-3 gap-4">
+          
           <div>
             <label className="text-gray-600 flex items-center gap-2 mb-1">
               <FiMapPin /> Country
@@ -148,6 +151,7 @@ export default function FindJobsPage() {
               Apply Filters
             </button>
           </div>
+
         </div>
       </div>
 
@@ -156,15 +160,23 @@ export default function FindJobsPage() {
         {loading ? (
           <p className="text-center text-lg text-gray-700">Loading jobs...</p>
         ) : jobs.length === 0 ? (
-          <p className="text-center text-lg text-gray-700">No matching jobs found.</p>
+          <p className="text-center text-lg text-gray-700">
+            No matching jobs found.
+          </p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {jobs.map((job, index) => (
               <div key={index} className="bg-white p-6 rounded-2xl shadow-lg">
                 <a href={job.link} target="_blank" rel="noopener noreferrer">
-                  <h2 className="text-xl font-bold hover:text-green-600">{job.title}</h2>
+                  <h2 className="text-xl font-bold hover:text-green-600">
+                    {job.title}
+                  </h2>
                 </a>
-                <p className="text-gray-600">{job.company || "Unknown Company"}</p>
+
+                <p className="text-gray-600">
+                  {job.company || "Unknown Company"}
+                </p>
+
                 <p className="text-gray-500">{job.location}</p>
 
                 {job.salary ? (
@@ -172,7 +184,9 @@ export default function FindJobsPage() {
                     Salary: ${job.salary}
                   </p>
                 ) : (
-                  <p className="text-gray-400 mt-2 text-sm">(No salary info)</p>
+                  <p className="text-gray-400 mt-2 text-sm">
+                    (No salary info)
+                  </p>
                 )}
 
                 <p className="text-gray-700 mt-3">
@@ -180,7 +194,9 @@ export default function FindJobsPage() {
                 </p>
 
                 <div className="mt-4 flex justify-between">
-                  <span className="text-green-600 font-semibold">{job.source}</span>
+                  <span className="text-green-600 font-semibold">
+                    {job.source}
+                  </span>
                   <span className="text-gray-600">Remote / Flexible</span>
                 </div>
               </div>
