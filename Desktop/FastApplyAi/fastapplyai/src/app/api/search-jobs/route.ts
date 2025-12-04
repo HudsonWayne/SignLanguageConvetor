@@ -46,9 +46,7 @@ export async function POST(req: Request) {
   const country = body.country || "";
   const minSalary = Number(body.minSalary || 0);
 
-  // ----------
-  // 1. JOBICY (filtered: ONLY /job/ links)
-  // ----------
+  // ---------- 1) JOBICY ----------
   const jobicyXML = await safeFetch("https://jobicy.com/feed");
   let jobicyJobs = parseRSS(jobicyXML)
     .filter((j) => j.link.includes("/job/")) // remove articles
@@ -58,21 +56,17 @@ export async function POST(req: Request) {
       salary: null,
     }));
 
-  // ----------
-  // 2. WORKANYWHERE (filtered: ONLY /jobs/ links)
-  // ----------
+  // ---------- 2) WORKANYWHERE ----------
   const waXML = await safeFetch("https://workanywhere.pro/jobs/feed/");
   let waJobs = parseRSS(waXML)
-    .filter((j) => j.link.includes("/jobs/")) // remove blog posts
+    .filter((j) => j.link.includes("/jobs/"))
     .map((j) => ({
       ...j,
       source: "WorkAnywhere",
       salary: null,
     }));
 
-  // ----------
-  // 3. FINDWORK — REAL API WITH SALARY
-  // ----------
+  // ---------- 3) FINDWORK ----------
   let findworkJobs: any[] = [];
   try {
     const res = await fetch("https://findwork.dev/api/jobs/?remote=true", {
@@ -94,28 +88,19 @@ export async function POST(req: Request) {
     console.error("Findwork error", e);
   }
 
-  // ----------
-  // MERGE ALL JOBS
-  // ----------
+  // ---------- MERGE ----------
   let allJobs = [...jobicyJobs, ...waJobs, ...findworkJobs];
 
-  // ----------
-  // FILTER BY COUNTRY (case-insensitive)
-  // ----------
+  // ---------- FILTER: COUNTRY ----------
   if (country.trim() !== "") {
     allJobs = allJobs.filter((job) =>
       job.location.toLowerCase().includes(country.toLowerCase())
     );
   }
 
-  // ----------
-  // FILTER BY MINIMUM SALARY (only FindWork supports salary)
-  // ----------
+  // ---------- FILTER: SALARY ----------
   if (minSalary > 0) {
-    allJobs = allJobs.filter((job) => {
-      if (!job.salary) return false;
-      return job.salary >= minSalary;
-    });
+    allJobs = allJobs.filter((job) => job.salary && job.salary >= minSalary);
   }
 
   return NextResponse.json(allJobs);
