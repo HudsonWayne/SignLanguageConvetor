@@ -39,12 +39,12 @@ function parseRSS(xml: string) {
   return items;
 }
 
-// Main route
+// Main API route
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
-  const country = body.country?.toLowerCase() || "";
+  const country = (body.country || "").toLowerCase();
   const minSalary = Number(body.minSalary || 0);
-  const keyword = body.keyword?.toLowerCase() || "";
+  const keyword = (body.keyword || "").toLowerCase();
 
   // 1️⃣ Jobicy
   const jobicyXML = await safeFetch("https://jobicy.com/feed");
@@ -82,7 +82,7 @@ export async function POST(req: Request) {
   // Merge all jobs
   let allJobs = [...jobicyJobs, ...waJobs, ...findworkJobs];
 
-  // Filter by keyword
+  // Keyword filter
   if (keyword) {
     allJobs = allJobs.filter(
       (job) =>
@@ -91,22 +91,20 @@ export async function POST(req: Request) {
     );
   }
 
-  // Filter by country (soft)
-  let filteredByCountry = country
-    ? allJobs.filter((job) => job.location.toLowerCase().includes(country))
+  // Country filter (soft)
+  let filtered = country
+    ? allJobs.filter((job) =>
+        job.location.toLowerCase().includes(country)
+      )
     : allJobs;
+  if (filtered.length === 0) filtered = allJobs;
 
-  if (filteredByCountry.length === 0) filteredByCountry = allJobs;
-
-  // Filter by minSalary (soft)
-  let filteredBySalary =
+  // Min salary filter (soft)
+  let filteredSalary =
     minSalary > 0
-      ? filteredByCountry.filter(
-          (job) => job.salary && Number(job.salary) >= minSalary
-        )
-      : filteredByCountry;
+      ? filtered.filter((job) => job.salary && Number(job.salary) >= minSalary)
+      : filtered;
+  if (filteredSalary.length === 0) filteredSalary = filtered;
 
-  if (filteredBySalary.length === 0) filteredBySalary = filteredByCountry;
-
-  return NextResponse.json(filteredBySalary);
+  return NextResponse.json(filteredSalary);
 }

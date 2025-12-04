@@ -158,7 +158,7 @@ export default function FindJobsPage() {
         {loading ? (
           <p className="text-center text-lg text-gray-700">Loading jobs...</p>
         ) : jobs.length === 0 ? (
-          <p className="text-center text-lg text-gray-700">No jobs found.</p>
+          <p className="text-center text-lg text-gray-700">No jobs found. Try removing the country or lowering the salary.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {jobs.map((job, index) => (
