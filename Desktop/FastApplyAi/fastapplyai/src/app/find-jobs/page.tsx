@@ -28,11 +28,16 @@ export default function FindJobsPage() {
   const [loading, setLoading] = useState(false);
   const [country, setCountry] = useState("");
   const [minSalary, setMinSalary] = useState("");
-  const [keyword, setKeyword] = useState("");
+  const [keywords, setKeywords] = useState<string[]>([]); // from CV
   const [mobileMenu, setMobileMenu] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => setMounted(true), []);
+  // Load skills from localStorage (extracted from CV)
+  useEffect(() => {
+    setMounted(true);
+    const storedSkills = localStorage.getItem("skills");
+    if (storedSkills) setKeywords(JSON.parse(storedSkills));
+  }, []);
 
   const fetchJobs = async () => {
     setLoading(true);
@@ -40,7 +45,7 @@ export default function FindJobsPage() {
       const res = await fetch("/api/search-jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ country, minSalary, keyword }),
+        body: JSON.stringify({ country, minSalary, keywords }),
       });
       const data = await res.json();
       setJobs(data);
@@ -102,13 +107,13 @@ export default function FindJobsPage() {
       <div className="text-center mt-14 sm:mt-20 mb-10 px-4">
         <h1 className="text-4xl md:text-5xl font-extrabold">Find Matching Jobs</h1>
         <p className="text-gray-700 mt-4 text-lg md:w-2/3 mx-auto">
-          Real-time jobs from Jobicy, WorkAnywhere, and FindWork.
+          Jobs are matched based on your CV skills and preferences.
         </p>
       </div>
 
       {/* FILTERS */}
       <div className="px-6 md:px-20 mb-10">
-        <div className="bg-white p-6 rounded-2xl shadow-xl grid grid-cols-1 sm:grid-cols-4 gap-4">
+        <div className="bg-white p-6 rounded-2xl shadow-xl grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="text-gray-600 flex items-center gap-2 mb-1"><FiMapPin /> Country</label>
             <input
@@ -131,17 +136,6 @@ export default function FindJobsPage() {
             />
           </div>
 
-          <div>
-            <label className="text-gray-600 flex items-center gap-2 mb-1">Keyword / Skill</label>
-            <input
-              type="text"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              className="p-3 border rounded-lg w-full"
-              placeholder="e.g. React, Marketing"
-            />
-          </div>
-
           <div className="flex items-end">
             <button
               onClick={fetchJobs}
@@ -158,7 +152,9 @@ export default function FindJobsPage() {
         {loading ? (
           <p className="text-center text-lg text-gray-700">Loading jobs...</p>
         ) : jobs.length === 0 ? (
-          <p className="text-center text-lg text-gray-700">No jobs found. Try removing the country or lowering the salary.</p>
+          <p className="text-center text-lg text-gray-700">
+            No jobs found. Try removing the country or lowering the salary.
+          </p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {jobs.map((job, index) => (
