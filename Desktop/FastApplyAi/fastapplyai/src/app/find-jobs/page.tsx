@@ -9,7 +9,6 @@ import {
   FiMenu,
   FiX,
   FiMapPin,
-  FiDollarSign,
 } from "react-icons/fi";
 import { useEffect, useState } from "react";
 
@@ -19,7 +18,6 @@ interface Job {
   description: string;
   location: string;
   link: string;
-  salary?: number | null;
   source: string;
 }
 
@@ -27,7 +25,6 @@ export default function FindJobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
   const [country, setCountry] = useState("");
-  const [minSalary, setMinSalary] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
   const [skillInput, setSkillInput] = useState("");
   const [mobileMenu, setMobileMenu] = useState(false);
@@ -49,8 +46,7 @@ export default function FindJobsPage() {
   // helper: add skill manually
   const addSkill = () => {
     const s = skillInput.trim();
-    if (!s) return;
-    if (skills.includes(s)) {
+    if (!s || skills.includes(s)) {
       setSkillInput("");
       return;
     }
@@ -74,7 +70,6 @@ export default function FindJobsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           country,
-          minSalary,
           keywords: skills,
         }),
       });
@@ -91,6 +86,26 @@ export default function FindJobsPage() {
     if (mounted) fetchJobs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted]);
+
+  // Semi-automatic apply
+  const applyToJob = async (job: Job) => {
+    const applicant = {
+      name: "John Doe",
+      email: "john@example.com",
+      phone: "123-456-7890",
+      resumeUrl: "/resume.pdf",
+    };
+
+    // Log the application (can store in DB later)
+    await fetch("/api/apply-job", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jobLink: job.link, applicant }),
+    });
+
+    // Open job link in new tab
+    window.open(job.link, "_blank");
+  };
 
   if (!mounted) return <div className="min-h-screen bg-gray-100" />;
 
@@ -133,15 +148,10 @@ export default function FindJobsPage() {
 
       {/* Filters + Skills */}
       <div className="px-6 md:px-20 mb-8">
-        <div className="bg-white p-6 rounded-2xl shadow-xl grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white p-6 rounded-2xl shadow-xl grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="text-gray-600 flex items-center gap-2 mb-1"><FiMapPin/> Country</label>
             <input value={country} onChange={(e)=>setCountry(e.target.value)} className="p-3 border rounded-lg w-full" placeholder="e.g. Zimbabwe, South Africa, Remote"/>
-          </div>
-
-          <div>
-            <label className="text-gray-600 flex items-center gap-2 mb-1"><FiDollarSign/> Minimum Salary</label>
-            <input value={minSalary} onChange={(e)=>setMinSalary(e.target.value)} type="number" className="p-3 border rounded-lg w-full" placeholder="Only some sources provide salary"/>
           </div>
 
           <div className="flex items-end">
@@ -183,23 +193,27 @@ export default function FindJobsPage() {
         ) : jobs.length === 0 ? (
           <div className="text-center">
             <p className="text-lg text-gray-700">No jobs found. Showing all international remote jobs instead.</p>
-            <p className="text-sm text-gray-500 mt-2">Tip: remove country or lower salary, or add more skills to match.</p>
+            <p className="text-sm text-gray-500 mt-2">Tip: remove country or add more skills to match.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {jobs.map((job, idx) => (
-              <div key={idx} className="bg-white p-6 rounded-2xl shadow-lg">
-                <a href={job.link || "#"} target="_blank" rel="noreferrer">
-                  <h2 className="text-xl font-bold hover:text-green-600">{job.title}</h2>
-                </a>
-                <p className="text-gray-600">{job.company || "Unknown Company"}</p>
-                <p className="text-gray-500">{job.location}</p>
-                {job.salary ? <p className="text-green-600 mt-2 font-semibold">Salary: ${job.salary}</p> : <p className="text-gray-400 mt-2 text-sm">(No salary info)</p>}
-                <p className="text-gray-700 mt-3">{job.description ? job.description.substring(0,200) + "..." : ""}</p>
-                <div className="mt-4 flex justify-between">
-                  <span className="text-green-600 font-semibold">{job.source}</span>
-                  <span className="text-gray-600">Remote / Flexible</span>
+              <div key={idx} className="bg-white p-6 rounded-2xl shadow-lg flex flex-col justify-between">
+                <div>
+                  <a href={job.link || "#"} target="_blank" rel="noreferrer">
+                    <h2 className="text-xl font-bold hover:text-green-600">{job.title}</h2>
+                  </a>
+                  <p className="text-gray-600">{job.company || "Unknown Company"}</p>
+                  <p className="text-gray-500">{job.location}</p>
+                  <p className="text-gray-700 mt-3">{job.description ? job.description.substring(0,200) + "..." : ""}</p>
+                  <p className="text-sm text-gray-400 mt-2">Source: {job.source}</p>
                 </div>
+                <button
+                  onClick={() => applyToJob(job)}
+                  className="mt-4 bg-green-500 text-white p-3 rounded-lg w-full hover:bg-green-600 transition"
+                >
+                  Apply
+                </button>
               </div>
             ))}
           </div>
