@@ -28,15 +28,43 @@ export default function FindJobsPage() {
   const [loading, setLoading] = useState(false);
   const [country, setCountry] = useState("");
   const [minSalary, setMinSalary] = useState("");
-  const [keywords, setKeywords] = useState<string[]>([]);
+  const [skills, setSkills] = useState<string[]>([]);
+  const [skillInput, setSkillInput] = useState("");
   const [mobileMenu, setMobileMenu] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  // load skills from localStorage (CV extractor should set key "skills" to JSON array)
   useEffect(() => {
     setMounted(true);
-    const storedSkills = localStorage.getItem("skills");
-    if (storedSkills) setKeywords(JSON.parse(storedSkills));
+    const stored = localStorage.getItem("skills");
+    if (stored) {
+      try {
+        setSkills(JSON.parse(stored));
+      } catch {
+        // ignore parse errors
+      }
+    }
   }, []);
+
+  // helper: add skill manually
+  const addSkill = () => {
+    const s = skillInput.trim();
+    if (!s) return;
+    if (skills.includes(s)) {
+      setSkillInput("");
+      return;
+    }
+    const next = [...skills, s];
+    setSkills(next);
+    localStorage.setItem("skills", JSON.stringify(next));
+    setSkillInput("");
+  };
+
+  const removeSkill = (s: string) => {
+    const next = skills.filter(k => k !== s);
+    setSkills(next);
+    localStorage.setItem("skills", JSON.stringify(next));
+  };
 
   const fetchJobs = async () => {
     setLoading(true);
@@ -47,26 +75,29 @@ export default function FindJobsPage() {
         body: JSON.stringify({
           country,
           minSalary,
-          keywords,
+          keywords: skills,
         }),
       });
-
       const data = await res.json();
       setJobs(data);
-    } catch (err) {
-      console.error("Job fetch error:", err);
+    } catch (e) {
+      console.error("fetchJobs error", e);
+      setJobs([]);
     }
     setLoading(false);
   };
 
   useEffect(() => {
     if (mounted) fetchJobs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted]);
 
-  if (!mounted) return <div className="min-h-screen bg-gray-100"></div>;
+  if (!mounted) return <div className="min-h-screen bg-gray-100" />;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-300 via-blue-200 to-green-200 text-gray-900 font-sans">
+
+      {/* NAV */}
       <nav className="flex items-center justify-between px-6 py-4 shadow-md bg-white sticky top-0 z-50">
         <div className="flex items-center gap-2 font-bold text-lg">
           <div className="bg-green-500 text-white rounded-md px-2 py-1">QA</div>
@@ -74,109 +105,97 @@ export default function FindJobsPage() {
         </div>
 
         <div className="hidden md:flex items-center gap-4 text-gray-700">
-          <Link href="/dashboard" className="flex items-center gap-1 bg-green-500 text-white px-3 py-2 rounded-md">
-            <FiUser /> Dashboard
-          </Link>
-          <Link href="/upload-cv" className="flex items-center gap-1 hover:text-green-600">
-            <FiUpload /> Upload CV
-          </Link>
-          <Link href="/find-jobs" className="flex items-center gap-1 text-green-600 font-semibold">
-            <FiSearch /> Find Jobs
-          </Link>
+          <Link href="/dashboard" className="flex items-center gap-1 bg-green-500 text-white px-3 py-2 rounded-md"><FiUser /> Dashboard</Link>
+          <Link href="/upload-cv" className="flex items-center gap-1 hover:text-green-600"><FiUpload /> Upload CV</Link>
+          <Link href="/find-jobs" className="flex items-center gap-1 text-green-600 font-semibold"><FiSearch /> Find Jobs</Link>
           <Link href="/applied">Applied Jobs</Link>
-          <Link href="/notifications" className="flex items-center gap-1 hover:text-green-600">
-            <FiBell /> Notifications
-          </Link>
+          <Link href="/notifications" className="flex items-center gap-1 hover:text-green-600"><FiBell /> Notifications</Link>
         </div>
 
-        <button onClick={() => setMobileMenu(!mobileMenu)} className="md:hidden text-2xl">
-          {mobileMenu ? <FiX /> : <FiMenu />}
-        </button>
+        <button onClick={() => setMobileMenu(!mobileMenu)} className="md:hidden text-2xl">{mobileMenu ? <FiX /> : <FiMenu />}</button>
       </nav>
 
       {mobileMenu && (
         <div className="bg-white shadow-lg border-b p-5 space-y-4 text-gray-700">
           <Link href="/dashboard">Dashboard</Link>
           <Link href="/upload-cv">Upload CV</Link>
-          <Link href="/find-jobs" className="font-semibold text-green-600">Find Jobs</Link>
+          <Link href="/find-jobs" className="text-green-600 font-semibold">Find Jobs</Link>
           <Link href="/applied">Applied Jobs</Link>
           <Link href="/notifications">Notifications</Link>
         </div>
       )}
 
-      <div className="text-center mt-14 sm:mt-20 mb-10 px-4">
+      {/* Header */}
+      <div className="text-center mt-14 sm:mt-20 mb-6 px-4">
         <h1 className="text-4xl md:text-5xl font-extrabold">Find Matching Jobs</h1>
-        <p className="text-gray-700 mt-4 text-lg md:w-2/3 mx-auto">
-          Jobs are matched based on your CV skills.
-        </p>
+        <p className="text-gray-700 mt-4 text-lg md:w-2/3 mx-auto">Jobs are matched based on your CV skills and preferences.</p>
       </div>
 
-      <div className="px-6 md:px-20 mb-10">
+      {/* Filters + Skills */}
+      <div className="px-6 md:px-20 mb-8">
         <div className="bg-white p-6 rounded-2xl shadow-xl grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label className="text-gray-600 flex items-center gap-2 mb-1">
-              <FiMapPin /> Country
-            </label>
-            <input
-              type="text"
-              value={country}
-              onChange={(e) => setCountry(e.target.value)}
-              className="p-3 border rounded-lg w-full"
-              placeholder="e.g. Zimbabwe, South Africa, Remote"
-            />
+            <label className="text-gray-600 flex items-center gap-2 mb-1"><FiMapPin/> Country</label>
+            <input value={country} onChange={(e)=>setCountry(e.target.value)} className="p-3 border rounded-lg w-full" placeholder="e.g. Zimbabwe, South Africa, Remote"/>
           </div>
 
           <div>
-            <label className="text-gray-600 flex items-center gap-2 mb-1">
-              <FiDollarSign /> Minimum Salary
-            </label>
-            <input
-              type="number"
-              value={minSalary}
-              onChange={(e) => setMinSalary(e.target.value)}
-              className="p-3 border rounded-lg w-full"
-              placeholder="Only FindWork supports salary"
-            />
+            <label className="text-gray-600 flex items-center gap-2 mb-1"><FiDollarSign/> Minimum Salary</label>
+            <input value={minSalary} onChange={(e)=>setMinSalary(e.target.value)} type="number" className="p-3 border rounded-lg w-full" placeholder="Only some sources provide salary"/>
           </div>
 
           <div className="flex items-end">
-            <button
-              onClick={fetchJobs}
-              className="w-full bg-green-500 text-white p-3 rounded-lg"
-            >
-              Apply Filters
-            </button>
+            <button onClick={fetchJobs} className="w-full bg-green-500 text-white p-3 rounded-lg">Apply Filters</button>
+          </div>
+        </div>
+
+        {/* Skills area */}
+        <div className="mt-4 bg-white p-4 rounded-xl shadow">
+          <div className="flex items-center gap-2">
+            <input
+              value={skillInput}
+              onChange={(e) => setSkillInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") addSkill(); }}
+              placeholder="Add skill (manual) — e.g. React"
+              className="flex-1 p-2 border rounded"
+            />
+            <button onClick={addSkill} className="bg-blue-600 text-white px-3 py-2 rounded">Add</button>
+            <button onClick={() => { localStorage.removeItem("skills"); setSkills([]); }} className="ml-2 text-sm text-gray-500">Clear saved skills</button>
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            {skills.length === 0 ? (
+              <div className="text-sm text-gray-500">No skills loaded from CV. Upload a CV on Upload CV page or add skills manually.</div>
+            ) : skills.map(s => (
+              <div key={s} className="bg-gray-100 px-3 py-1 rounded flex items-center gap-2">
+                <span className="text-sm">{s}</span>
+                <button onClick={() => removeSkill(s)} className="text-xs text-red-500">x</button>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
+      {/* Results */}
       <div className="px-6 md:px-20 pb-20">
         {loading ? (
           <p className="text-center text-lg text-gray-700">Loading jobs...</p>
         ) : jobs.length === 0 ? (
-          <p className="text-center text-lg text-gray-700">
-            No jobs found. Showing all international remote jobs instead.
-          </p>
+          <div className="text-center">
+            <p className="text-lg text-gray-700">No jobs found. Showing all international remote jobs instead.</p>
+            <p className="text-sm text-gray-500 mt-2">Tip: remove country or lower salary, or add more skills to match.</p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {jobs.map((job, index) => (
-              <div key={index} className="bg-white p-6 rounded-2xl shadow-lg">
-                <a href={job.link} target="_blank" rel="noopener noreferrer">
+            {jobs.map((job, idx) => (
+              <div key={idx} className="bg-white p-6 rounded-2xl shadow-lg">
+                <a href={job.link || "#"} target="_blank" rel="noreferrer">
                   <h2 className="text-xl font-bold hover:text-green-600">{job.title}</h2>
                 </a>
                 <p className="text-gray-600">{job.company || "Unknown Company"}</p>
                 <p className="text-gray-500">{job.location}</p>
-
-                {job.salary ? (
-                  <p className="text-green-600 mt-2 font-semibold">Salary: ${job.salary}</p>
-                ) : (
-                  <p className="text-gray-400 mt-2 text-sm">(No salary info)</p>
-                )}
-
-                <p className="text-gray-700 mt-3">
-                  {job.description.substring(0, 200)}...
-                </p>
-
+                {job.salary ? <p className="text-green-600 mt-2 font-semibold">Salary: ${job.salary}</p> : <p className="text-gray-400 mt-2 text-sm">(No salary info)</p>}
+                <p className="text-gray-700 mt-3">{job.description ? job.description.substring(0,200) + "..." : ""}</p>
                 <div className="mt-4 flex justify-between">
                   <span className="text-green-600 font-semibold">{job.source}</span>
                   <span className="text-gray-600">Remote / Flexible</span>
@@ -186,6 +205,7 @@ export default function FindJobsPage() {
           </div>
         )}
       </div>
+
     </div>
   );
 }
