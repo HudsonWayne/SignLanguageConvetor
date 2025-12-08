@@ -2,15 +2,20 @@
 import { NextResponse } from "next/server";
 
 /**
- * Aggregates jobs from multiple sources, cleans descriptions, adds links.
+ * Fetches jobs from multiple job sources (RSS + APIs),
+ * cleans descriptions, normalizes fields, dedupes,
+ * and returns filtered results.
  */
 
-// Simple HTML sanitizer: strips all HTML tags
+/* ------------------------- UTILITIES ------------------------- */
+
+// Simple HTML sanitizer: removes all HTML tags
 function cleanHtml(html: string) {
   if (!html) return "";
   return html.replace(/<[^>]+>/g, "").trim();
 }
 
+// Safe text fetch
 async function safeFetchText(url: string) {
   try {
     const res = await fetch(url, {
@@ -19,11 +24,12 @@ async function safeFetchText(url: string) {
     });
     return await res.text();
   } catch (e) {
-    console.error("safeFetchText error", url, e);
+    console.error("safeFetchText error:", url, e);
     return "";
   }
 }
 
+// Safe JSON fetch
 async function safeFetchJson(url: string) {
   try {
     const res = await fetch(url, {
@@ -32,33 +38,42 @@ async function safeFetchJson(url: string) {
     });
     return await res.json();
   } catch (e) {
-    console.error("safeFetchJson error", url, e);
+    console.error("safeFetchJson error:", url, e);
     return null;
   }
 }
 
+/* ------------------------- RSS PARSER ------------------------- */
+
 function parseRSSItems(xml: string) {
   const items: any[] = [];
   if (!xml) return items;
+
   const regex = /<item>([\s\S]*?)<\/item>/g;
   let match;
+
   while ((match = regex.exec(xml))) {
     const block = match[1];
+
     const get = (tag: string) => {
       const m = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`).exec(block);
       return m ? cleanHtml(m[1]) : "";
     };
+
     items.push({
       title: get("title"),
-      company: get("dc:creator") || "",
-      link: get("link") || get("guid") || "",
+      company: get("dc:creator"),
+      link: get("link") || get("guid"),
       location: get("category") || "Remote",
-      description: get("description") || "",
+      description: get("description"),
       source: "RSS",
     });
   }
+
   return items;
 }
+
+/* ------------------------- NORMALIZER ------------------------- */
 
 function normalize(job: any) {
   return {
@@ -73,88 +88,100 @@ function normalize(job: any) {
 
 function dedupe(jobs: any[]) {
   const seen = new Map<string, any>();
+
   for (const j of jobs) {
-    const key = (j.link || (j.title + "|" + j.company)).toLowerCase();
+    const key = (j.link || `${j.title}|${j.company}`).toLowerCase();
     if (!seen.has(key)) seen.set(key, j);
   }
+
   return Array.from(seen.values());
 }
 
+/* ------------------------- MAIN HANDLER ------------------------- */
+
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
+
   const country = (body.country || "").toString().trim().toLowerCase();
   const keywords: string[] = Array.isArray(body.keywords) ? body.keywords : [];
 
-  // 1) Jobicy
+  /* ---------- 1) Jobicy ---------- */
   const jobicyXml = await safeFetchText("https://jobicy.com/feed");
-  const jobicy = parseRSSItems(jobicyXml).map((j) => ({ ...j, source: "Jobicy" }));
+  const jobicy = parseRSSItems(jobicyXml).map((j) => ({
+    ...j,
+    source: "Jobicy",
+  }));
 
-  // 2) WorkAnywhere
+  /* ---------- 2) WorkAnywhere ---------- */
   const waXml = await safeFetchText("https://workanywhere.pro/jobs/feed/");
-  const workAnywhere = parseRSSItems(waXml).map((j) => ({ ...j, source: "WorkAnywhere" }));
+  const workAnywhere = parseRSSItems(waXml).map((j) => ({
+    ...j,
+    source: "WorkAnywhere",
+  }));
 
-  // 3) FindWork
+  /* ---------- 3) FindWork API ---------- */
   let findwork: any[] = [];
-  try {
-    const findworkJson = await safeFetchJson("https://findwork.dev/api/jobs/?remote=true");
-    if (findworkJson && Array.isArray(findworkJson.results)) {
-      findwork = findworkJson.results.map((job: any) => ({
-        title: job.role || "",
-        company: job.company_name || "",
-        description: cleanHtml(job.text || ""),
-        location: job.location || "Remote",
-        link: job.url || job.apply_url || "",
-        source: "FindWork",
-      }));
-    }
-  } catch (e) {
-    console.error("findwork parse error", e);
+  const fwJson = await safeFetchJson("https://findwork.dev/api/jobs/?remote=true");
+
+  if (fwJson && Array.isArray(fwJson.results)) {
+    findwork = fwJson.results.map((job: any) => ({
+      title: job.role || "",
+      company: job.company_name || "",
+      description: cleanHtml(job.text || ""),
+      location: job.location || "Remote",
+      link: job.url || job.apply_url || "",
+      source: "FindWork",
+    }));
   }
 
-  // 4) RemoteOK
+  /* ---------- 4) RemoteOK API ---------- */
   let remoteok: any[] = [];
-  try {
-    const ro = await safeFetchJson("https://remoteok.com/api");
-    if (Array.isArray(ro)) {
-      for (let i = 0; i < ro.length; i++) {
-        const r = ro[i];
-        if (!r || !r.position) continue;
-        remoteok.push({
-          title: r.position || r.title || "",
-          company: r.company || "",
-          description: cleanHtml(r.description || r.tags?.join(" ") || ""),
-          location: r.location || r.country || (r.remote ? "Remote" : ""),
-          link: r.url || r.url_ro || `https://remoteok.com/remote-jobs/${r.id}`,
-          source: "RemoteOK",
-        });
-      }
+  const roJson = await safeFetchJson("https://remoteok.com/api");
+
+  if (Array.isArray(roJson)) {
+    for (const r of roJson) {
+      if (!r || !r.position) continue;
+
+      remoteok.push({
+        title: r.position || r.title || "",
+        company: r.company || "",
+        description: cleanHtml(r.description || r.tags?.join(" ") || ""),
+        location: r.location || r.country || (r.remote ? "Remote" : ""),
+        link: r.url || r.url_ro || `https://remoteok.com/remote-jobs/${r.id}`,
+        source: "RemoteOK",
+      });
     }
-  } catch (e) {
-    console.error("remoteok error", e);
   }
 
-  // 5) WeWorkRemotely
+  /* ---------- 5) WeWorkRemotely ---------- */
   const wwrXml = await safeFetchText("https://weworkremotely.com/remote-jobs.rss");
-  const wwr = parseRSSItems(wwrXml).map((j) => ({ ...j, source: "WeWorkRemotely" }));
+  const wwr = parseRSSItems(wwrXml).map((j) => ({
+    ...j,
+    source: "WeWorkRemotely",
+  }));
 
-  // Merge, normalize, dedupe
+  /* ---------- MERGE + CLEAN ---------- */
   let all = [...jobicy, ...workAnywhere, ...findwork, ...remoteok, ...wwr].map(normalize);
   all = dedupe(all);
 
-  // Filter by keywords
+  /* ---------- Keyword Filtering ---------- */
   if (keywords.length > 0) {
-    const kws = keywords.map((k) => k.toLowerCase());
+    const kw = keywords.map((k) => k.toLowerCase());
+
     all = all.filter((job) =>
-      kws.some((kw) =>
-        (job.title + " " + job.description + " " + job.company).toLowerCase().includes(kw)
+      kw.some((k) =>
+        (job.title + " " + job.company + " " + job.description).toLowerCase().includes(k)
       )
     );
   }
 
-  // Soft country filter
+  /* ---------- Country Filtering ---------- */
   const filtered = country
-    ? all.filter((job) => (job.location || "remote").toLowerCase().includes(country))
+    ? all.filter((job) =>
+        (job.location || "remote").toLowerCase().includes(country)
+      )
     : all;
 
+  /* ---------- Final Output ---------- */
   return NextResponse.json(filtered.slice(0, 200));
 }
