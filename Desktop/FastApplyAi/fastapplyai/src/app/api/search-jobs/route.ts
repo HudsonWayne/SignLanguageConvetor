@@ -1,37 +1,54 @@
 // src/app/api/search-jobs/route.ts
 import { NextResponse } from "next/server";
+import sanitizeHtml from "sanitize-html";
 
-// --- SAFE FETCH HELPER ---
-async function safeFetch(url: string) {
+/**
+ * Aggregates jobs from multiple sources, sanitizes descriptions for safe HTML display.
+ */
+
+async function safeFetchText(url: string) {
   try {
     const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0" },
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; FastApplyBot/1.0)" },
       cache: "no-store",
     });
     return await res.text();
   } catch (e) {
-    console.error("Fetch error:", url, e);
+    console.error("safeFetchText error", url, e);
     return "";
   }
 }
 
-// --- SIMPLE RSS PARSER ---
-function parseRSS(xml: string) {
+async function safeFetchJson(url: string) {
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; FastApplyBot/1.0)" },
+      cache: "no-store",
+    });
+    return await res.json();
+  } catch (e) {
+    console.error("safeFetchJson error", url, e);
+    return null;
+  }
+}
+
+function parseRSSItems(xml: string) {
   const items: any[] = [];
+  if (!xml) return items;
   const regex = /<item>([\s\S]*?)<\/item>/g;
   let match;
   while ((match = regex.exec(xml))) {
     const block = match[1];
     const get = (tag: string) => {
       const m = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`).exec(block);
-      return m ? m[1].replace(/<!\[CDATA\[|\]\]>/g, "") : "";
+      return m ? m[1].replace(/<!\[CDATA\[|\]\]>/g, "").trim() : "";
     };
     items.push({
       title: get("title"),
       company: get("dc:creator") || "",
-      link: get("link"),
+      link: get("link") || get("guid") || "",
       location: get("category") || "Remote",
-      description: get("description"),
+      description: sanitizeHtml(get("description") || ""),
       salary: null,
       source: "RSS",
     });
@@ -39,90 +56,113 @@ function parseRSS(xml: string) {
   return items;
 }
 
-// --- MAIN API ---
+function normalize(job: any) {
+  return {
+    title: (job.title || "").trim(),
+    company: (job.company || "").trim() || (job.source === "FindWork" ? job.company_name || "" : ""),
+    description: sanitizeHtml(job.description || job.text || ""),
+    location: (job.location || job.category || "Remote").trim() || "Remote",
+    link: (job.link || job.url || job.apply_url || "").trim(),
+    salary: job.salary ? (Number(job.salary) || job.salary) : null,
+    source: job.source || "Unknown",
+  };
+}
+
+function dedupe(jobs: any[]) {
+  const seen = new Map<string, any>();
+  for (const j of jobs) {
+    const key = (j.link || (j.title + "|" + j.company)).toLowerCase();
+    if (!seen.has(key)) seen.set(key, j);
+  }
+  return Array.from(seen.values());
+}
+
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
-  const country = (body.country || "").toLowerCase();
+  const country = (body.country || "").toString().trim().toLowerCase();
   const minSalary = Number(body.minSalary || 0);
-  const keywords: string[] = body.keywords || [];
+  const keywords: string[] = Array.isArray(body.keywords) ? body.keywords : [];
 
-  // 1️⃣ Jobicy
-  const jobicyXML = await safeFetch("https://jobicy.com/feed");
-  const jobicyJobs = parseRSS(jobicyXML).map((j) => ({ ...j, source: "Jobicy" }));
+  // 1) Jobicy
+  const jobicyXml = await safeFetchText("https://jobicy.com/feed");
+  const jobicy = parseRSSItems(jobicyXml).map((j) => ({ ...j, source: "Jobicy" }));
 
-  // 2️⃣ WorkAnywhere
-  const waXML = await safeFetch("https://workanywhere.pro/jobs/feed/");
-  const waJobs = parseRSS(waXML).map((j) => ({ ...j, source: "WorkAnywhere" }));
+  // 2) WorkAnywhere
+  const waXml = await safeFetchText("https://workanywhere.pro/jobs/feed/");
+  const workAnywhere = parseRSSItems(waXml).map((j) => ({ ...j, source: "WorkAnywhere" }));
 
-  // 3️⃣ FindWork
-  let findworkJobs: any[] = [];
+  // 3) FindWork
+  let findwork: any[] = [];
   try {
-    const res = await fetch("https://findwork.dev/api/jobs/?remote=true", {
-      headers: { "User-Agent": "Mozilla/5.0" },
-      cache: "no-store",
-    });
-    const data = await res.json();
-    findworkJobs = data.results.map((r: any) => ({
-      title: r.role,
-      company: r.company_name,
-      description: r.text,
-      location: r.location || "Remote",
-      salary: r.salary || null,
-      link: r.url ?? `https://findwork.dev/jobs/${r.id}`,
-      source: "FindWork",
-    }));
-  } catch (e) {
-    console.error("FindWork error", e);
-  }
-
-  // 4️⃣ RemoteOK (example)
-  let remoteOKJobs: any[] = [];
-  try {
-    const res = await fetch("https://remoteok.com/api", {
-      headers: { "User-Agent": "Mozilla/5.0" },
-      cache: "no-store",
-    });
-    const data = await res.json();
-    remoteOKJobs = data
-      .filter((r: any) => r.position)
-      .map((r: any) => ({
-        title: r.position,
-        company: r.company,
-        description: r.description || r.tags?.join(" ") || "",
-        location: r.location || r.country || (r.remote ? "Remote" : ""),
-        salary: r.salary || null,
-        link: (r.url || r.url_ro) ?? `https://remoteok.com/remote-jobs/${r.id}`,
-        source: "RemoteOK",
+    const findworkJson = await safeFetchJson("https://findwork.dev/api/jobs/?remote=true");
+    if (findworkJson && Array.isArray(findworkJson.results)) {
+      findwork = findworkJson.results.map((job: any) => ({
+        title: job.role || "",
+        company: job.company_name || "",
+        description: sanitizeHtml(job.text || ""),
+        location: job.location || "Remote",
+        link: job.url || job.apply_url || "",
+        salary: job.salary || null,
+        source: "FindWork",
       }));
+    }
   } catch (e) {
-    console.error("RemoteOK error", e);
+    console.error("findwork parse error", e);
   }
 
-  // Merge all jobs
-  let allJobs = [...jobicyJobs, ...waJobs, ...findworkJobs, ...remoteOKJobs];
+  // 4) RemoteOK
+  let remoteok: any[] = [];
+  try {
+    const ro = await safeFetchJson("https://remoteok.com/api");
+    if (Array.isArray(ro)) {
+      for (let i = 0; i < ro.length; i++) {
+        const r = ro[i];
+        if (!r || !r.position) continue;
+        remoteok.push({
+          title: r.position || r.title || "",
+          company: r.company || "",
+          description: sanitizeHtml(r.description || r.tags?.join(" ") || ""),
+          location: r.location || r.country || (r.remote ? "Remote" : ""),
+          link: r.url || r.url_ro || `https://remoteok.com/remote-jobs/${r.id}`,
+          salary: r.salary || null,
+          source: "RemoteOK",
+        });
+      }
+    }
+  } catch (e) {
+    console.error("remoteok error", e);
+  }
 
-  // --- Filter by keywords (skills from CV)
+  // 5) WeWorkRemotely
+  const wwrXml = await safeFetchText("https://weworkremotely.com/remote-jobs.rss");
+  const wwr = parseRSSItems(wwrXml).map((j) => ({ ...j, source: "WeWorkRemotely" }));
+
+  // Merge and normalize
+  let all = [...jobicy, ...workAnywhere, ...findwork, ...remoteok, ...wwr].map(normalize);
+  all = dedupe(all);
+
+  // Filter by keywords
   if (keywords.length > 0) {
-    allJobs = allJobs.filter((job) =>
-      keywords.some((skill) =>
-        job.title.toLowerCase().includes(skill.toLowerCase()) ||
-        job.description.toLowerCase().includes(skill.toLowerCase())
+    const kws = keywords.map((k) => k.toLowerCase());
+    all = all.filter((job) =>
+      kws.some((kw) =>
+        (job.title + " " + job.description + " " + job.company).toLowerCase().includes(kw)
       )
     );
   }
 
-  // --- Filter by country
+  // Soft country filter
   let filtered = country
-    ? allJobs.filter((job) => job.location.toLowerCase().includes(country))
-    : allJobs;
-  if (filtered.length === 0) filtered = allJobs;
+    ? all.filter((job) => (job.location || "remote").toLowerCase().includes(country))
+    : all;
+  if (filtered.length === 0) filtered = all;
 
-  // --- Filter by salary
-  let filteredSalary =
-    minSalary > 0
-      ? filtered.filter((job) => job.salary && Number(job.salary) >= minSalary)
-      : filtered;
+  // Soft salary filter
+  let filteredSalary = minSalary > 0
+    ? filtered.filter((job) => job.salary && Number(job.salary) >= minSalary)
+    : filtered;
   if (filteredSalary.length === 0) filteredSalary = filtered;
 
-  return NextResponse.json(filteredSalary);
+  const result = filteredSalary.slice(0, 200); // limit response
+  return NextResponse.json(result);
 }
