@@ -1,11 +1,17 @@
 // src/app/api/search-jobs/route.ts
 import { NextResponse } from "next/server";
-import sanitizeHtml from "sanitize-html";
 
 /**
- * Aggregates jobs from multiple sources, sanitizes descriptions for safe HTML display.
+ * Aggregates jobs from multiple sources, cleans descriptions for safe display.
  */
 
+// Simple HTML sanitizer: strips all HTML tags
+function cleanHtml(html: string) {
+  if (!html) return "";
+  return html.replace(/<[^>]+>/g, "").trim();
+}
+
+// Fetch text safely
 async function safeFetchText(url: string) {
   try {
     const res = await fetch(url, {
@@ -19,6 +25,7 @@ async function safeFetchText(url: string) {
   }
 }
 
+// Fetch JSON safely
 async function safeFetchJson(url: string) {
   try {
     const res = await fetch(url, {
@@ -32,6 +39,7 @@ async function safeFetchJson(url: string) {
   }
 }
 
+// Parse RSS feed items
 function parseRSSItems(xml: string) {
   const items: any[] = [];
   if (!xml) return items;
@@ -41,14 +49,14 @@ function parseRSSItems(xml: string) {
     const block = match[1];
     const get = (tag: string) => {
       const m = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`).exec(block);
-      return m ? m[1].replace(/<!\[CDATA\[|\]\]>/g, "").trim() : "";
+      return m ? cleanHtml(m[1]) : "";
     };
     items.push({
       title: get("title"),
       company: get("dc:creator") || "",
       link: get("link") || get("guid") || "",
       location: get("category") || "Remote",
-      description: sanitizeHtml(get("description") || ""),
+      description: get("description") || "",
       salary: null,
       source: "RSS",
     });
@@ -56,11 +64,12 @@ function parseRSSItems(xml: string) {
   return items;
 }
 
+// Normalize job structure
 function normalize(job: any) {
   return {
     title: (job.title || "").trim(),
     company: (job.company || "").trim() || (job.source === "FindWork" ? job.company_name || "" : ""),
-    description: sanitizeHtml(job.description || job.text || ""),
+    description: cleanHtml(job.description || job.text || ""),
     location: (job.location || job.category || "Remote").trim() || "Remote",
     link: (job.link || job.url || job.apply_url || "").trim(),
     salary: job.salary ? (Number(job.salary) || job.salary) : null,
@@ -68,6 +77,7 @@ function normalize(job: any) {
   };
 }
 
+// Remove duplicate jobs
 function dedupe(jobs: any[]) {
   const seen = new Map<string, any>();
   for (const j of jobs) {
@@ -77,6 +87,7 @@ function dedupe(jobs: any[]) {
   return Array.from(seen.values());
 }
 
+// API handler
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const country = (body.country || "").toString().trim().toLowerCase();
@@ -99,7 +110,7 @@ export async function POST(req: Request) {
       findwork = findworkJson.results.map((job: any) => ({
         title: job.role || "",
         company: job.company_name || "",
-        description: sanitizeHtml(job.text || ""),
+        description: cleanHtml(job.text || ""),
         location: job.location || "Remote",
         link: job.url || job.apply_url || "",
         salary: job.salary || null,
@@ -121,7 +132,7 @@ export async function POST(req: Request) {
         remoteok.push({
           title: r.position || r.title || "",
           company: r.company || "",
-          description: sanitizeHtml(r.description || r.tags?.join(" ") || ""),
+          description: cleanHtml(r.description || r.tags?.join(" ") || ""),
           location: r.location || r.country || (r.remote ? "Remote" : ""),
           link: r.url || r.url_ro || `https://remoteok.com/remote-jobs/${r.id}`,
           salary: r.salary || null,
@@ -137,7 +148,7 @@ export async function POST(req: Request) {
   const wwrXml = await safeFetchText("https://weworkremotely.com/remote-jobs.rss");
   const wwr = parseRSSItems(wwrXml).map((j) => ({ ...j, source: "WeWorkRemotely" }));
 
-  // Merge and normalize
+  // Merge, normalize, dedupe
   let all = [...jobicy, ...workAnywhere, ...findwork, ...remoteok, ...wwr].map(normalize);
   all = dedupe(all);
 
@@ -151,18 +162,18 @@ export async function POST(req: Request) {
     );
   }
 
-  // Soft country filter
+  // Filter by country (soft)
   let filtered = country
     ? all.filter((job) => (job.location || "remote").toLowerCase().includes(country))
     : all;
   if (filtered.length === 0) filtered = all;
 
-  // Soft salary filter
+  // Filter by min salary (soft)
   let filteredSalary = minSalary > 0
     ? filtered.filter((job) => job.salary && Number(job.salary) >= minSalary)
     : filtered;
   if (filteredSalary.length === 0) filteredSalary = filtered;
 
-  const result = filteredSalary.slice(0, 200); // limit response
+  const result = filteredSalary.slice(0, 200);
   return NextResponse.json(result);
 }
