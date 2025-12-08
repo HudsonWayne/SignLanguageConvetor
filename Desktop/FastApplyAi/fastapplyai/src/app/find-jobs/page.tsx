@@ -28,11 +28,10 @@ export default function FindJobsPage() {
   const [loading, setLoading] = useState(false);
   const [country, setCountry] = useState("");
   const [minSalary, setMinSalary] = useState("");
-  const [keywords, setKeywords] = useState<string[]>([]); // from CV
+  const [keywords, setKeywords] = useState<string[]>([]);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // Load skills from localStorage (extracted from CV)
   useEffect(() => {
     setMounted(true);
     const storedSkills = localStorage.getItem("skills");
@@ -45,8 +44,13 @@ export default function FindJobsPage() {
       const res = await fetch("/api/search-jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ country, minSalary, keywords }),
+        body: JSON.stringify({
+          country,
+          minSalary,
+          keywords,
+        }),
       });
+
       const data = await res.json();
       setJobs(data);
     } catch (err) {
@@ -63,8 +67,6 @@ export default function FindJobsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-300 via-blue-200 to-green-200 text-gray-900 font-sans">
-
-      {/* NAVBAR */}
       <nav className="flex items-center justify-between px-6 py-4 shadow-md bg-white sticky top-0 z-50">
         <div className="flex items-center gap-2 font-bold text-lg">
           <div className="bg-green-500 text-white rounded-md px-2 py-1">QA</div>
@@ -92,7 +94,6 @@ export default function FindJobsPage() {
         </button>
       </nav>
 
-      {/* MOBILE MENU */}
       {mobileMenu && (
         <div className="bg-white shadow-lg border-b p-5 space-y-4 text-gray-700">
           <Link href="/dashboard">Dashboard</Link>
@@ -103,30 +104,32 @@ export default function FindJobsPage() {
         </div>
       )}
 
-      {/* HEADER */}
       <div className="text-center mt-14 sm:mt-20 mb-10 px-4">
         <h1 className="text-4xl md:text-5xl font-extrabold">Find Matching Jobs</h1>
         <p className="text-gray-700 mt-4 text-lg md:w-2/3 mx-auto">
-          Jobs are matched based on your CV skills and preferences.
+          Jobs are matched based on your CV skills.
         </p>
       </div>
 
-      {/* FILTERS */}
       <div className="px-6 md:px-20 mb-10">
         <div className="bg-white p-6 rounded-2xl shadow-xl grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label className="text-gray-600 flex items-center gap-2 mb-1"><FiMapPin /> Country</label>
+            <label className="text-gray-600 flex items-center gap-2 mb-1">
+              <FiMapPin /> Country
+            </label>
             <input
               type="text"
               value={country}
               onChange={(e) => setCountry(e.target.value)}
               className="p-3 border rounded-lg w-full"
-              placeholder="e.g. Zimbabwe, Remote"
+              placeholder="e.g. Zimbabwe, South Africa, Remote"
             />
           </div>
 
           <div>
-            <label className="text-gray-600 flex items-center gap-2 mb-1"><FiDollarSign /> Minimum Salary</label>
+            <label className="text-gray-600 flex items-center gap-2 mb-1">
+              <FiDollarSign /> Minimum Salary
+            </label>
             <input
               type="number"
               value={minSalary}
@@ -147,13 +150,12 @@ export default function FindJobsPage() {
         </div>
       </div>
 
-      {/* JOB RESULTS */}
       <div className="px-6 md:px-20 pb-20">
         {loading ? (
           <p className="text-center text-lg text-gray-700">Loading jobs...</p>
         ) : jobs.length === 0 ? (
           <p className="text-center text-lg text-gray-700">
-            No jobs found. Try removing the country or lowering the salary.
+            No jobs found. Showing all international remote jobs instead.
           </p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -164,12 +166,17 @@ export default function FindJobsPage() {
                 </a>
                 <p className="text-gray-600">{job.company || "Unknown Company"}</p>
                 <p className="text-gray-500">{job.location}</p>
+
                 {job.salary ? (
                   <p className="text-green-600 mt-2 font-semibold">Salary: ${job.salary}</p>
                 ) : (
                   <p className="text-gray-400 mt-2 text-sm">(No salary info)</p>
                 )}
-                <p className="text-gray-700 mt-3">{job.description.substring(0, 200)}...</p>
+
+                <p className="text-gray-700 mt-3">
+                  {job.description.substring(0, 200)}...
+                </p>
+
                 <div className="mt-4 flex justify-between">
                   <span className="text-green-600 font-semibold">{job.source}</span>
                   <span className="text-gray-600">Remote / Flexible</span>
@@ -179,7 +186,6 @@ export default function FindJobsPage() {
           </div>
         )}
       </div>
-
     </div>
   );
 }
