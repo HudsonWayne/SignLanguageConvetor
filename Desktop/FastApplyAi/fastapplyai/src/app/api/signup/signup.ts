@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
 
     if (!email || !password) {
       return NextResponse.json({ message: "Email and password are required" }, { status: 400 });
-    }
+    } 
 
     await connectDB();
 
