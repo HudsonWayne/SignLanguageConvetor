@@ -81,19 +81,13 @@ function parseRSSItems(xml: string) {
 /* ------------------------- NORMALIZER ------------------------- */
 
 function normalize(job: any) {
-  let location = (job.location || job.category || "Remote").trim();
-
-  // Normalize Zimbabwe city names to "Zimbabwe"
-  const zimCities = ["harare", "bulawayo", "mutare", "gweru", "masvingo", "kadoma"];
-  if (zimCities.some((city) => location.toLowerCase().includes(city))) {
-    location = "Zimbabwe";
-  }
+  const location = (job.location || job.category || "Remote").trim();
 
   return {
     title: (job.title || "").trim(),
     company: (job.company || "").trim(),
     description: cleanHtml(job.description || job.text || ""),
-    location: location || "Remote",
+    location: location || "Remote", // Keep exact city/country
     link: (job.link || job.url || job.apply_url || "").trim(),
     source: job.source || "Unknown",
   };
@@ -101,10 +95,12 @@ function normalize(job: any) {
 
 function dedupe(jobs: any[]) {
   const seen = new Map<string, any>();
+
   for (const j of jobs) {
     const key = (j.link || `${j.title}|${j.company}`).toLowerCase();
     if (!seen.has(key)) seen.set(key, j);
   }
+
   return Array.from(seen.values());
 }
 
@@ -112,6 +108,7 @@ function dedupe(jobs: any[]) {
 
 async function fetchZimboJobs() {
   const jobs: any[] = [];
+
   const html = await safeFetchText("https://www.zimbojobs.com/jobs");
   if (!html) return jobs;
 
@@ -151,15 +148,24 @@ export async function POST(req: Request) {
 
   /* ---------- 1) Jobicy ---------- */
   const jobicyXml = await safeFetchText("https://jobicy.com/feed");
-  const jobicy = parseRSSItems(jobicyXml).map((j) => ({ ...j, source: "Jobicy" }));
+  const jobicy = parseRSSItems(jobicyXml).map((j) => ({
+    ...j,
+    source: "Jobicy",
+  }));
 
   /* ---------- 2) WorkAnywhere ---------- */
   const waXml = await safeFetchText("https://workanywhere.pro/jobs/feed/");
-  const workAnywhere = parseRSSItems(waXml).map((j) => ({ ...j, source: "WorkAnywhere" }));
+  const workAnywhere = parseRSSItems(waXml).map((j) => ({
+    ...j,
+    source: "WorkAnywhere",
+  }));
 
   /* ---------- 3) FindWork API ---------- */
   let findwork: any[] = [];
-  const fwJson = await safeFetchJson("https://findwork.dev/api/jobs/?remote=true");
+  const fwJson = await safeFetchJson(
+    "https://findwork.dev/api/jobs/?remote=true"
+  );
+
   if (fwJson && Array.isArray(fwJson.results)) {
     findwork = fwJson.results.map((job: any) => ({
       title: job.role || "",
@@ -174,9 +180,11 @@ export async function POST(req: Request) {
   /* ---------- 4) RemoteOK API ---------- */
   let remoteok: any[] = [];
   const roJson = await safeFetchJson("https://remoteok.com/api");
+
   if (Array.isArray(roJson)) {
     for (const r of roJson) {
       if (!r || !r.position) continue;
+
       remoteok.push({
         title: r.position || r.title || "",
         company: r.company || "",
@@ -189,8 +197,13 @@ export async function POST(req: Request) {
   }
 
   /* ---------- 5) WeWorkRemotely ---------- */
-  const wwrXml = await safeFetchText("https://weworkremotely.com/remote-jobs.rss");
-  const wwr = parseRSSItems(wwrXml).map((j) => ({ ...j, source: "WeWorkRemotely" }));
+  const wwrXml = await safeFetchText(
+    "https://weworkremotely.com/remote-jobs.rss"
+  );
+  const wwr = parseRSSItems(wwrXml).map((j) => ({
+    ...j,
+    source: "WeWorkRemotely",
+  }));
 
   /* ---------- 6) ZimboJobs ---------- */
   const zimbojobs = await fetchZimboJobs();
@@ -210,6 +223,7 @@ export async function POST(req: Request) {
   /* ---------- Keyword Filtering ---------- */
   if (keywords.length > 0) {
     const kw = keywords.map((k) => k.toLowerCase());
+
     all = all.filter((job) =>
       kw.some((k) =>
         (job.title + " " + job.company + " " + job.description)
@@ -219,11 +233,10 @@ export async function POST(req: Request) {
     );
   }
 
-  /* ---------- Country Filtering (include Remote always) ---------- */
+  /* ---------- Country / City Filtering ---------- */
   const filtered = country
     ? all.filter((job) =>
-        (job.location || "remote").toLowerCase().includes(country) ||
-        (job.location || "").toLowerCase().includes("remote")
+        (job.location || "remote").toLowerCase().includes(country)
       )
     : all;
 
