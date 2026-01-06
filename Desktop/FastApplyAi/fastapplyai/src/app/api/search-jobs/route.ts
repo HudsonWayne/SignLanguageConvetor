@@ -1,8 +1,8 @@
-// src/app/api/search-jobs/route.ts
 import { NextResponse } from "next/server";
+import { load } from "cheerio";
 
 /**
- * Fetches jobs from multiple job sources (RSS + APIs),
+ * Fetches jobs from multiple job sources (RSS + APIs + scraping),
  * cleans descriptions, normalizes fields, dedupes,
  * and returns filtered results.
  */
@@ -19,7 +19,9 @@ function cleanHtml(html: string) {
 async function safeFetchText(url: string) {
   try {
     const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; FastApplyBot/1.0)" },
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; FastApplyBot/1.0)",
+      },
       cache: "no-store",
     });
     return await res.text();
@@ -33,7 +35,9 @@ async function safeFetchText(url: string) {
 async function safeFetchJson(url: string) {
   try {
     const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; FastApplyBot/1.0)" },
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; FastApplyBot/1.0)",
+      },
       cache: "no-store",
     });
     return await res.json();
@@ -95,6 +99,40 @@ function dedupe(jobs: any[]) {
   }
 
   return Array.from(seen.values());
+}
+
+/* ------------------------- ZIMBOJOBS SCRAPER ------------------------- */
+
+async function fetchZimboJobs() {
+  const jobs: any[] = [];
+
+  const html = await safeFetchText("https://www.zimbojobs.com/jobs");
+  if (!html) return jobs;
+
+  const $ = load(html);
+
+  $(".job-listing").each((_, el) => {
+    const title = $(el).find("h3 a").text().trim();
+    const link = $(el).find("h3 a").attr("href") || "";
+    const company = $(el).find(".job-company").text().trim();
+    const location = $(el).find(".job-location").text().trim() || "Zimbabwe";
+    const description = $(el).find(".job-description").text().trim();
+
+    if (!title || !link) return;
+
+    jobs.push({
+      title,
+      company,
+      description,
+      location,
+      link: link.startsWith("http")
+        ? link
+        : `https://www.zimbojobs.com${link}`,
+      source: "ZimboJobs",
+    });
+  });
+
+  return jobs;
 }
 
 /* ------------------------- MAIN HANDLER ------------------------- */
@@ -160,8 +198,19 @@ export async function POST(req: Request) {
     source: "WeWorkRemotely",
   }));
 
+  /* ---------- 6) ZimboJobs ---------- */
+  const zimbojobs = await fetchZimboJobs();
+
   /* ---------- MERGE + CLEAN ---------- */
-  let all = [...jobicy, ...workAnywhere, ...findwork, ...remoteok, ...wwr].map(normalize);
+  let all = [
+    ...jobicy,
+    ...workAnywhere,
+    ...findwork,
+    ...remoteok,
+    ...wwr,
+    ...zimbojobs,
+  ].map(normalize);
+
   all = dedupe(all);
 
   /* ---------- Keyword Filtering ---------- */
@@ -170,7 +219,9 @@ export async function POST(req: Request) {
 
     all = all.filter((job) =>
       kw.some((k) =>
-        (job.title + " " + job.company + " " + job.description).toLowerCase().includes(k)
+        (job.title + " " + job.company + " " + job.description)
+          .toLowerCase()
+          .includes(k)
       )
     );
   }
