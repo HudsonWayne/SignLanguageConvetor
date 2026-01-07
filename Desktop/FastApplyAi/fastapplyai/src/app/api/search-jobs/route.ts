@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { load } from "cheerio";
 
-/* ----------------------------- HELPERS ----------------------------- */
+/* ========================== HELPERS ========================== */
 
 function clean(text = "") {
   return text.replace(/\s+/g, " ").trim();
@@ -12,40 +12,49 @@ async function safeFetch(url: string) {
   try {
     const res = await fetch(url, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (FastApplyAI Bot)",
+        "User-Agent": "Mozilla/5.0 (QuickApplyAI Bot)",
       },
       cache: "no-store",
     });
+
+    if (!res.ok) return "";
     return await res.text();
-  } catch (e) {
-    console.error("Fetch failed:", url);
+  } catch {
     return "";
   }
 }
 
-/* ------------------------- STEP 1: LISTINGS ------------------------- */
-
+/* ====================== STEP 1: LISTINGS ===================== */
+/**
+ * Crawl MULTIPLE pages to get MANY job links
+ */
 async function fetchListingLinks() {
-  const html = await safeFetch(
-    "https://www.zimbajob.com/job-vacancies-search-zimbabwe"
-  );
-
-  if (!html) return [];
-
-  const $ = load(html);
   const links = new Set<string>();
 
-  $("h3 a").each((_, el) => {
-    const href = $(el).attr("href");
-    if (href && href.includes("/job-vacancies-zimbabwe/")) {
-      links.add(`https://www.zimbajob.com${href}`);
-    }
-  });
+  // Crawl first 5 pages (safe & realistic)
+  for (let page = 1; page <= 5; page++) {
+    const url =
+      page === 1
+        ? "https://www.zimbajob.com/job-vacancies-search-zimbabwe"
+        : `https://www.zimbajob.com/job-vacancies-search-zimbabwe?page=${page}`;
+
+    const html = await safeFetch(url);
+    if (!html) continue;
+
+    const $ = load(html);
+
+    $("h3 a").each((_, el) => {
+      const href = $(el).attr("href");
+      if (href && href.includes("/job-vacancies-zimbabwe/")) {
+        links.add(`https://www.zimbajob.com${href}`);
+      }
+    });
+  }
 
   return Array.from(links);
 }
 
-/* ---------------------- STEP 2: JOB DETAILS ------------------------ */
+/* ===================== STEP 2: DETAILS ======================= */
 
 async function fetchJobDetails(url: string) {
   const html = await safeFetch(url);
@@ -54,13 +63,16 @@ async function fetchJobDetails(url: string) {
   const $ = load(html);
 
   const title = clean($("h1").first().text());
+  if (!title) return null;
+
   const company = clean(
     $(".card-block-company h3 a").first().text()
   );
 
-  const location = clean(
-    $(".withicon.location-dot span").first().text() || "Zimbabwe"
-  );
+  const location =
+    clean($(".withicon.location-dot span").first().text()) ||
+    clean($("li:contains('Region') span").text()) ||
+    "Zimbabwe";
 
   const description = clean(
     $(".job-description").text() +
@@ -69,12 +81,13 @@ async function fetchJobDetails(url: string) {
   );
 
   const salary = clean(
-    $("li:contains('Salary expectations') span").text()
+    $("li:contains('Salary') span").text()
   );
 
   const skills: string[] = [];
   $(".skills li").each((_, el) => {
-    skills.push(clean($(el).text()));
+    const s = clean($(el).text());
+    if (s) skills.push(s);
   });
 
   return {
@@ -89,47 +102,62 @@ async function fetchJobDetails(url: string) {
   };
 }
 
-/* ---------------------------- API ---------------------------- */
+/* ============================ API ============================ */
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
+
   const country = (body.country || "").toLowerCase();
   const keywords: string[] = body.keywords || [];
 
-  /* 1️⃣ Get job links */
+  /* 1️⃣ Get MANY job links */
   const links = await fetchListingLinks();
 
-  /* 2️⃣ Fetch details */
+  /* 2️⃣ Fetch MANY job details (limit for safety) */
   const jobsRaw = await Promise.all(
-    links.slice(0, 20).map(fetchJobDetails)
+    links.slice(0, 60).map(fetchJobDetails)
   );
 
   let jobs = jobsRaw.filter(Boolean) as any[];
 
-  /* 3️⃣ Country filter */
+  /* 3️⃣ SMART location filter */
   if (country) {
-    jobs = jobs.filter((j) =>
-      j.location.toLowerCase().includes(country)
-    );
+    jobs = jobs.filter((j) => {
+      const loc = j.location.toLowerCase();
+      return (
+        loc.includes(country) ||
+        loc.includes("zimbabwe") ||
+        loc.includes("harare") ||
+        loc.includes("bulawayo")
+      );
+    });
   }
 
-  /* 4️⃣ Skills filter */
+  /* 4️⃣ Skill / keyword filter */
   if (keywords.length) {
     const kw = keywords.map((k) => k.toLowerCase());
+
     jobs = jobs.filter((j) =>
       kw.some(
         (k) =>
-          j.skills.join(" ").toLowerCase().includes(k) ||
           j.title.toLowerCase().includes(k) ||
-          j.description.toLowerCase().includes(k)
+          j.description.toLowerCase().includes(k) ||
+          j.skills.join(" ").toLowerCase().includes(k)
       )
     );
   }
 
-  /* 5️⃣ Fallback (remote/global) */
+  /* 5️⃣ Fallback: still return LOCAL jobs */
   if (!jobs.length) {
-    jobs = jobsRaw.filter(Boolean) as any[];
+    jobs = jobsRaw.filter(
+      (j) =>
+        j &&
+        j.location.toLowerCase().includes("zimbabwe")
+    ) as any[];
   }
 
-  return NextResponse.json(jobs.slice(0, 100));
+  return NextResponse.json({
+    count: jobs.length,
+    jobs: jobs.slice(0, 100),
+  });
 }
