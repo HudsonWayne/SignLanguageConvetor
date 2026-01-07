@@ -30,6 +30,14 @@ export default function FindJobsPage() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  // Mock user/applicant data for auto-apply
+  const user = {
+    fullName: "Wayne Benhura",
+    email: "wayne@email.com",
+    phone: "+263771000000",
+    resumeUrl: "/resume.pdf",
+  };
+
   useEffect(() => {
     setMounted(true);
     const stored = localStorage.getItem("skills");
@@ -67,7 +75,7 @@ export default function FindJobsPage() {
         body: JSON.stringify({ country, keywords: skills }),
       });
       const data = await res.json();
-      setJobs(data);
+      setJobs(data.jobs || data); // support both structures
     } catch (e) {
       console.error("fetchJobs error", e);
       setJobs([]);
@@ -80,20 +88,30 @@ export default function FindJobsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted]);
 
+  // Auto apply function
+  const autoApply = async (job: Job) => {
+    try {
+      const res = await fetch("/api/auto-apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ job, user }),
+      });
+
+      const data = await res.json();
+
+      if (data.redirect) {
+        window.open(data.redirect, "_blank");
+      } else {
+        alert(data.message || "Application sent successfully!");
+      }
+    } catch (e) {
+      console.error("Auto apply failed", e);
+      alert("Auto apply failed. Please try manually.");
+    }
+  };
+
+  // Manual apply fallback
   const applyToJob = async (job: Job) => {
-    const applicant = {
-      name: "John Doe",
-      email: "john@example.com",
-      phone: "123-456-7890",
-      resumeUrl: "/resume.pdf",
-    };
-
-    await fetch("/api/apply-job", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ jobLink: job.link, applicant }),
-    });
-
     window.open(job.link, "_blank");
   };
 
@@ -139,18 +157,8 @@ export default function FindJobsPage() {
 
       {mobileMenu && (
         <div className="md:hidden bg-white/95 backdrop-blur-lg border-b shadow-lg p-5 space-y-3">
-          {[
-            ["Dashboard", "/dashboard"],
-            ["Upload CV", "/upload-cv"],
-            ["Find Jobs", "/find-jobs"],
-            ["Applied Jobs", "/applied"],
-            ["Notifications", "/notifications"],
-          ].map(([label, href]) => (
-            <Link
-              key={href}
-              href={href}
-              className="block px-4 py-3 rounded-xl hover:bg-green-100 transition font-medium"
-            >
+          {[["Dashboard", "/dashboard"], ["Upload CV", "/upload-cv"], ["Find Jobs", "/find-jobs"], ["Applied Jobs", "/applied"], ["Notifications", "/notifications"]].map(([label, href]) => (
+            <Link key={href} href={href} className="block px-4 py-3 rounded-xl hover:bg-green-100 transition font-medium">
               {label}
             </Link>
           ))}
@@ -281,12 +289,20 @@ export default function FindJobsPage() {
                   </p>
                 </div>
 
-                <button
-                  onClick={() => applyToJob(job)}
-                  className="mt-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white p-4 rounded-2xl font-bold shadow-lg hover:scale-[1.02] transition-transform"
-                >
-                  Apply Now
-                </button>
+                <div className="mt-6 flex gap-3">
+                  <button
+                    onClick={() => autoApply(job)}
+                    className="flex-1 bg-green-600 text-white p-4 rounded-2xl font-bold shadow-lg hover:scale-[1.02] transition"
+                  >
+                    Auto Apply 🤖
+                  </button>
+                  <button
+                    onClick={() => applyToJob(job)}
+                    className="flex-1 bg-gray-200 text-gray-800 p-4 rounded-2xl font-bold shadow-lg hover:bg-gray-300 transition"
+                  >
+                    Manual Apply
+                  </button>
+                </div>
               </div>
             ))}
           </div>
