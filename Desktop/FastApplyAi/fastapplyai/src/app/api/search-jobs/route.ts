@@ -2,244 +2,134 @@
 import { NextResponse } from "next/server";
 import { load } from "cheerio";
 
-/**
- * Fetches jobs from multiple job sources (RSS + APIs + scraping),
- * cleans descriptions, normalizes fields, dedupes,
- * and returns filtered results.
- */
+/* ----------------------------- HELPERS ----------------------------- */
 
-/* ------------------------- UTILITIES ------------------------- */
-
-// Simple HTML sanitizer: removes all HTML tags
-function cleanHtml(html: string) {
-  if (!html) return "";
-  return html.replace(/<[^>]+>/g, "").trim();
+function clean(text = "") {
+  return text.replace(/\s+/g, " ").trim();
 }
 
-// Safe text fetch
-async function safeFetchText(url: string) {
+async function safeFetch(url: string) {
   try {
     const res = await fetch(url, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; FastApplyBot/1.0)",
+        "User-Agent": "Mozilla/5.0 (FastApplyAI Bot)",
       },
       cache: "no-store",
     });
     return await res.text();
   } catch (e) {
-    console.error("safeFetchText error:", url, e);
+    console.error("Fetch failed:", url);
     return "";
   }
 }
 
-// Safe JSON fetch
-async function safeFetchJson(url: string) {
-  try {
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; FastApplyBot/1.0)",
-      },
-      cache: "no-store",
-    });
-    return await res.json();
-  } catch (e) {
-    console.error("safeFetchJson error:", url, e);
-    return null;
-  }
+/* ------------------------- STEP 1: LISTINGS ------------------------- */
+
+async function fetchListingLinks() {
+  const html = await safeFetch(
+    "https://www.zimbajob.com/job-vacancies-search-zimbabwe"
+  );
+
+  if (!html) return [];
+
+  const $ = load(html);
+  const links = new Set<string>();
+
+  $("h3 a").each((_, el) => {
+    const href = $(el).attr("href");
+    if (href && href.includes("/job-vacancies-zimbabwe/")) {
+      links.add(`https://www.zimbajob.com${href}`);
+    }
+  });
+
+  return Array.from(links);
 }
 
-/* ------------------------- RSS PARSER ------------------------- */
+/* ---------------------- STEP 2: JOB DETAILS ------------------------ */
 
-function parseRSSItems(xml: string) {
-  const items: any[] = [];
-  if (!xml) return items;
-
-  const regex = /<item>([\s\S]*?)<\/item>/g;
-  let match;
-
-  while ((match = regex.exec(xml))) {
-    const block = match[1];
-
-    const get = (tag: string) => {
-      const m = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`).exec(block);
-      return m ? cleanHtml(m[1]) : "";
-    };
-
-    items.push({
-      title: get("title"),
-      company: get("dc:creator"),
-      link: get("link") || get("guid"),
-      location: get("category") || "Remote",
-      description: get("description"),
-      source: "RSS",
-    });
-  }
-
-  return items;
-}
-
-/* ------------------------- NORMALIZER ------------------------- */
-
-function normalize(job: any) {
-  const location = (job.location || job.category || "Remote").trim();
-
-  return {
-    title: (job.title || "").trim(),
-    company: (job.company || "").trim(),
-    description: cleanHtml(job.description || job.text || ""),
-    location: location || "Remote", // Keep exact city/country
-    link: (job.link || job.url || job.apply_url || "").trim(),
-    source: job.source || "Unknown",
-  };
-}
-
-function dedupe(jobs: any[]) {
-  const seen = new Map<string, any>();
-
-  for (const j of jobs) {
-    const key = (j.link || `${j.title}|${j.company}`).toLowerCase();
-    if (!seen.has(key)) seen.set(key, j);
-  }
-
-  return Array.from(seen.values());
-}
-
-/* ------------------------- ZIMBOJOBS SCRAPER ------------------------- */
-
-async function fetchZimboJobs() {
-  const jobs: any[] = [];
-
-  const html = await safeFetchText("https://www.zimbojobs.com/jobs");
-  if (!html) return jobs;
+async function fetchJobDetails(url: string) {
+  const html = await safeFetch(url);
+  if (!html) return null;
 
   const $ = load(html);
 
-  $(".job-listing").each((_, el) => {
-    const title = $(el).find("h3 a").text().trim();
-    const link = $(el).find("h3 a").attr("href") || "";
-    const company = $(el).find(".job-company").text().trim();
-    const location = $(el).find(".job-location").text().trim() || "Zimbabwe";
-    const description = $(el).find(".job-description").text().trim();
+  const title = clean($("h1").first().text());
+  const company = clean(
+    $(".card-block-company h3 a").first().text()
+  );
 
-    if (!title || !link) return;
+  const location = clean(
+    $(".withicon.location-dot span").first().text() || "Zimbabwe"
+  );
 
-    jobs.push({
-      title,
-      company,
-      description,
-      location,
-      link: link.startsWith("http")
-        ? link
-        : `https://www.zimbojobs.com${link}`,
-      source: "ZimboJobs",
-    });
+  const description = clean(
+    $(".job-description").text() +
+      " " +
+      $(".job-qualifications").text()
+  );
+
+  const salary = clean(
+    $("li:contains('Salary expectations') span").text()
+  );
+
+  const skills: string[] = [];
+  $(".skills li").each((_, el) => {
+    skills.push(clean($(el).text()));
   });
 
-  return jobs;
+  return {
+    title,
+    company: company || "Unknown Company",
+    location,
+    description,
+    salary,
+    skills,
+    link: url,
+    source: "ZimbaJob",
+  };
 }
 
-/* ------------------------- MAIN HANDLER ------------------------- */
+/* ---------------------------- API ---------------------------- */
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
+  const country = (body.country || "").toLowerCase();
+  const keywords: string[] = body.keywords || [];
 
-  const country = (body.country || "").toString().trim().toLowerCase();
-  const keywords: string[] = Array.isArray(body.keywords) ? body.keywords : [];
+  /* 1️⃣ Get job links */
+  const links = await fetchListingLinks();
 
-  /* ---------- 1) Jobicy ---------- */
-  const jobicyXml = await safeFetchText("https://jobicy.com/feed");
-  const jobicy = parseRSSItems(jobicyXml).map((j) => ({
-    ...j,
-    source: "Jobicy",
-  }));
-
-  /* ---------- 2) WorkAnywhere ---------- */
-  const waXml = await safeFetchText("https://workanywhere.pro/jobs/feed/");
-  const workAnywhere = parseRSSItems(waXml).map((j) => ({
-    ...j,
-    source: "WorkAnywhere",
-  }));
-
-  /* ---------- 3) FindWork API ---------- */
-  let findwork: any[] = [];
-  const fwJson = await safeFetchJson(
-    "https://findwork.dev/api/jobs/?remote=true"
+  /* 2️⃣ Fetch details */
+  const jobsRaw = await Promise.all(
+    links.slice(0, 20).map(fetchJobDetails)
   );
 
-  if (fwJson && Array.isArray(fwJson.results)) {
-    findwork = fwJson.results.map((job: any) => ({
-      title: job.role || "",
-      company: job.company_name || "",
-      description: cleanHtml(job.text || ""),
-      location: job.location || "Remote",
-      link: job.url || job.apply_url || "",
-      source: "FindWork",
-    }));
+  let jobs = jobsRaw.filter(Boolean) as any[];
+
+  /* 3️⃣ Country filter */
+  if (country) {
+    jobs = jobs.filter((j) =>
+      j.location.toLowerCase().includes(country)
+    );
   }
 
-  /* ---------- 4) RemoteOK API ---------- */
-  let remoteok: any[] = [];
-  const roJson = await safeFetchJson("https://remoteok.com/api");
-
-  if (Array.isArray(roJson)) {
-    for (const r of roJson) {
-      if (!r || !r.position) continue;
-
-      remoteok.push({
-        title: r.position || r.title || "",
-        company: r.company || "",
-        description: cleanHtml(r.description || r.tags?.join(" ") || ""),
-        location: r.location || r.country || (r.remote ? "Remote" : ""),
-        link: r.url || r.url_ro || `https://remoteok.com/remote-jobs/${r.id}`,
-        source: "RemoteOK",
-      });
-    }
-  }
-
-  /* ---------- 5) WeWorkRemotely ---------- */
-  const wwrXml = await safeFetchText(
-    "https://weworkremotely.com/remote-jobs.rss"
-  );
-  const wwr = parseRSSItems(wwrXml).map((j) => ({
-    ...j,
-    source: "WeWorkRemotely",
-  }));
-
-  /* ---------- 6) ZimboJobs ---------- */
-  const zimbojobs = await fetchZimboJobs();
-
-  /* ---------- MERGE + CLEAN ---------- */
-  let all = [
-    ...jobicy,
-    ...workAnywhere,
-    ...findwork,
-    ...remoteok,
-    ...wwr,
-    ...zimbojobs,
-  ].map(normalize);
-
-  all = dedupe(all);
-
-  /* ---------- Keyword Filtering ---------- */
-  if (keywords.length > 0) {
+  /* 4️⃣ Skills filter */
+  if (keywords.length) {
     const kw = keywords.map((k) => k.toLowerCase());
-
-    all = all.filter((job) =>
-      kw.some((k) =>
-        (job.title + " " + job.company + " " + job.description)
-          .toLowerCase()
-          .includes(k)
+    jobs = jobs.filter((j) =>
+      kw.some(
+        (k) =>
+          j.skills.join(" ").toLowerCase().includes(k) ||
+          j.title.toLowerCase().includes(k) ||
+          j.description.toLowerCase().includes(k)
       )
     );
   }
 
-  /* ---------- Country / City Filtering ---------- */
-  const filtered = country
-    ? all.filter((job) =>
-        (job.location || "remote").toLowerCase().includes(country)
-      )
-    : all;
+  /* 5️⃣ Fallback (remote/global) */
+  if (!jobs.length) {
+    jobs = jobsRaw.filter(Boolean) as any[];
+  }
 
-  /* ---------- Final Output ---------- */
-  return NextResponse.json(filtered.slice(0, 200));
+  return NextResponse.json(jobs.slice(0, 100));
 }
