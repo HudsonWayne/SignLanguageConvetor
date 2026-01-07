@@ -32,7 +32,7 @@ export default function FindJobsPage() {
   const [mounted, setMounted] = useState(false);
   const [filter, setFilter] = useState<"all" | "local" | "remote">("all");
 
-  // Applicant info (mock for now)
+  // Applicant info (mock)
   const user = {
     fullName: "Wayne Benhura",
     email: "wayne@email.com",
@@ -89,20 +89,16 @@ export default function FindJobsPage() {
     if (mounted) fetchJobs();
   }, [mounted]);
 
-  // Filter jobs based on local / remote / out-of-country
+  // Filter jobs based on local / remote / all
   const filteredJobs = jobs.filter((job) => {
     const loc = job.location.toLowerCase();
     if (filter === "local") return loc.includes(country.toLowerCase()) || loc.includes("zimbabwe");
     if (filter === "remote") return job.remote || loc.includes("remote");
-    if (filter === "all") return true;
     return true;
   });
 
-  // Auto apply: open link in new tab, can be extended to API integration
-  const autoApply = (job: Job) => {
-    // Open job link directly
-    window.open(job.link, "_blank");
-  };
+  // Auto apply: open job link
+  const autoApply = (job: Job) => window.open(job.link, "_blank");
 
   if (!mounted) return <div className="min-h-screen bg-slate-100" />;
 
@@ -111,7 +107,7 @@ export default function FindJobsPage() {
 
       {/* NAV */}
       <nav className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 border-b border-white/40 shadow-sm">
-        <div className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
+        <div className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-4 max-w-7xl mx-auto">
           <div className="flex items-center gap-3 font-extrabold text-xl">
             <div className="bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-xl px-3 py-1 shadow-md">
               QA
@@ -135,18 +131,22 @@ export default function FindJobsPage() {
             </Link>
           </div>
 
-          <button
-            onClick={() => setMobileMenu(!mobileMenu)}
-            className="md:hidden text-2xl text-gray-700"
-          >
+          <button onClick={() => setMobileMenu(!mobileMenu)} className="md:hidden text-2xl text-gray-700">
             {mobileMenu ? <FiX /> : <FiMenu />}
           </button>
         </div>
       </nav>
 
+      {/* MOBILE MENU */}
       {mobileMenu && (
         <div className="md:hidden bg-white/95 backdrop-blur-lg border-b shadow-lg p-5 space-y-3">
-          {[["Dashboard", "/dashboard"], ["Upload CV", "/upload-cv"], ["Find Jobs", "/find-jobs"], ["Applied Jobs", "/applied"], ["Notifications", "/notifications"]].map(([label, href]) => (
+          {[
+            ["Dashboard", "/dashboard"],
+            ["Upload CV", "/upload-cv"],
+            ["Find Jobs", "/find-jobs"],
+            ["Applied Jobs", "/applied"],
+            ["Notifications", "/notifications"],
+          ].map(([label, href]) => (
             <Link key={href} href={href} className="block px-4 py-3 rounded-xl hover:bg-green-100 transition font-medium">
               {label}
             </Link>
@@ -156,17 +156,18 @@ export default function FindJobsPage() {
 
       {/* HEADER */}
       <header className="text-center mt-16 mb-10 px-4">
-        <h1 className="text-4xl md:text-6xl font-black text-gray-900 tracking-tight">
+        <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-gray-900 tracking-tight">
           Find Matching Jobs
         </h1>
-        <p className="text-gray-700 mt-5 text-lg max-w-2xl mx-auto">
+        <p className="text-gray-700 mt-5 text-lg sm:text-xl max-w-2xl mx-auto">
           We match real opportunities using your CV skills and preferences.
         </p>
       </header>
 
       {/* FILTERS */}
-      <section className="px-6 md:px-20 mb-10">
-        <div className="max-w-5xl mx-auto bg-white/80 backdrop-blur-xl p-8 rounded-3xl shadow-xl grid grid-cols-1 sm:grid-cols-3 gap-6">
+      <section className="px-4 sm:px-6 lg:px-20 mb-10">
+        <div className="max-w-5xl mx-auto bg-white/80 backdrop-blur-xl p-6 sm:p-8 rounded-3xl shadow-xl grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+          {/* COUNTRY INPUT */}
           <div>
             <label className="text-gray-700 flex items-center gap-2 mb-2 font-semibold">
               <FiMapPin /> Country
@@ -174,32 +175,34 @@ export default function FindJobsPage() {
             <input
               value={country}
               onChange={(e) => setCountry(e.target.value)}
-              className="p-4 border rounded-2xl w-full focus:ring-2 focus:ring-green-400 focus:outline-none"
               placeholder="Zimbabwe, South Africa, Remote"
+              className="p-3 sm:p-4 border rounded-2xl w-full focus:ring-2 focus:ring-green-400 focus:outline-none"
             />
           </div>
 
+          {/* FILTER BUTTONS */}
           <div className="flex flex-col gap-2">
             <span className="font-semibold text-gray-700">Filter Jobs</span>
-            <div className="flex gap-2">
-              <button onClick={() => setFilter("all")} className={`px-4 py-2 rounded-xl ${filter === "all" ? "bg-green-600 text-white" : "bg-gray-200"}`}>All</button>
-              <button onClick={() => setFilter("local")} className={`px-4 py-2 rounded-xl ${filter === "local" ? "bg-green-600 text-white" : "bg-gray-200"}`}>Local</button>
-              <button onClick={() => setFilter("remote")} className={`px-4 py-2 rounded-xl ${filter === "remote" ? "bg-green-600 text-white" : "bg-gray-200"}`}>Remote</button>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => setFilter("all")} className={`px-3 py-2 sm:px-4 sm:py-2 rounded-xl ${filter === "all" ? "bg-green-600 text-white" : "bg-gray-200"}`}>All</button>
+              <button onClick={() => setFilter("local")} className={`px-3 py-2 sm:px-4 sm:py-2 rounded-xl ${filter === "local" ? "bg-green-600 text-white" : "bg-gray-200"}`}>Local</button>
+              <button onClick={() => setFilter("remote")} className={`px-3 py-2 sm:px-4 sm:py-2 rounded-xl ${filter === "remote" ? "bg-green-600 text-white" : "bg-gray-200"}`}>Remote</button>
             </div>
           </div>
 
+          {/* APPLY FILTER BUTTON */}
           <div className="flex items-end">
             <button
               onClick={fetchJobs}
-              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white p-4 rounded-2xl font-bold shadow-lg hover:scale-[1.02] transition-transform"
+              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white p-3 sm:p-4 rounded-2xl font-bold shadow-lg hover:scale-[1.02] transition-transform"
             >
               Apply Filters
             </button>
           </div>
         </div>
 
-        {/* SKILLS */}
-        <div className="max-w-5xl mx-auto mt-8 bg-white/80 backdrop-blur-xl p-6 rounded-3xl shadow-lg">
+        {/* SKILLS INPUT */}
+        <div className="max-w-5xl mx-auto mt-6 sm:mt-8 bg-white/80 backdrop-blur-xl p-4 sm:p-6 rounded-3xl shadow-lg">
           <div className="flex flex-col sm:flex-row gap-3">
             <input
               value={skillInput}
@@ -208,38 +211,22 @@ export default function FindJobsPage() {
               placeholder="Add a skill — e.g. React"
               className="flex-1 p-3 border rounded-xl focus:ring-2 focus:ring-blue-400 focus:outline-none"
             />
-            <button
-              onClick={addSkill}
-              className="bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-700 transition"
-            >
+            <button onClick={addSkill} className="bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-700 transition">
               Add Skill
             </button>
-            <button
-              onClick={() => { localStorage.removeItem("skills"); setSkills([]); }}
-              className="text-sm text-gray-500 hover:text-gray-700 transition"
-            >
+            <button onClick={() => { localStorage.removeItem("skills"); setSkills([]); }} className="text-sm text-gray-500 hover:text-gray-700 transition">
               Clear
             </button>
           </div>
 
-          <div className="mt-5 flex flex-wrap gap-3">
+          <div className="mt-4 sm:mt-5 flex flex-wrap gap-2 sm:gap-3">
             {skills.length === 0 ? (
-              <p className="text-sm text-gray-500">
-                No skills loaded. Upload a CV or add skills manually.
-              </p>
+              <p className="text-sm text-gray-500">No skills loaded. Upload a CV or add skills manually.</p>
             ) : (
               skills.map(s => (
-                <div
-                  key={s}
-                  className="bg-green-100 text-green-800 px-4 py-2 rounded-full flex items-center gap-2 font-semibold shadow-sm"
-                >
+                <div key={s} className="bg-green-100 text-green-800 px-3 sm:px-4 py-1 sm:py-2 rounded-full flex items-center gap-2 font-semibold shadow-sm">
                   {s}
-                  <button
-                    onClick={() => removeSkill(s)}
-                    className="text-xs text-red-500 hover:text-red-700"
-                  >
-                    ✕
-                  </button>
+                  <button onClick={() => removeSkill(s)} className="text-xs text-red-500 hover:text-red-700">✕</button>
                 </div>
               ))
             )}
@@ -247,57 +234,34 @@ export default function FindJobsPage() {
         </div>
       </section>
 
-      {/* RESULTS */}
-      <main className="px-6 md:px-20 pb-24">
+      {/* JOB RESULTS */}
+      <main className="px-4 sm:px-6 lg:px-20 pb-24">
         {loading ? (
-          <p className="text-center text-lg text-gray-700 animate-pulse">
-            Loading jobs...
-          </p>
+          <p className="text-center text-lg sm:text-xl text-gray-700 animate-pulse">Loading jobs...</p>
         ) : filteredJobs.length === 0 ? (
           <div className="text-center text-gray-700">
-            <p className="text-lg font-semibold">
-              No jobs found for these filters.
-            </p>
-            <p className="text-sm text-gray-500 mt-2">
-              Tip: adjust country, filter, or add skills.
-            </p>
+            <p className="text-lg sm:text-xl font-semibold">No jobs found for these filters.</p>
+            <p className="text-sm sm:text-base text-gray-500 mt-2">Tip: adjust country, filter, or add skills.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-7xl mx-auto">
             {filteredJobs.map((job, idx) => (
-              <div
-                key={idx}
-                className="bg-white/90 backdrop-blur-xl p-7 rounded-3xl shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 flex flex-col justify-between"
-              >
+              <div key={idx} className="bg-white/90 backdrop-blur-xl p-5 sm:p-7 rounded-3xl shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 flex flex-col justify-between">
                 <div>
                   <a href={job.link} target="_blank" rel="noreferrer">
-                    <h2 className="text-2xl font-bold text-gray-900 hover:text-green-600 transition">
-                      {job.title}
-                    </h2>
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 hover:text-green-600 transition">{job.title}</h2>
                   </a>
-                  <p className="text-gray-600 mt-1 font-medium">
-                    {job.company || "Unknown Company"}
-                  </p>
-                  <p className="text-gray-500 mt-1">{job.location}</p>
-                  <p className="text-gray-700 mt-4 leading-relaxed">
-                    {job.description?.substring(0, 180)}...
-                  </p>
-                  <p className="text-xs text-gray-400 mt-3">
-                    Source: {job.source}
-                  </p>
+                  <p className="text-gray-600 mt-1 font-medium">{job.company || "Unknown Company"}</p>
+                  <p className="text-gray-500 mt-1 text-sm sm:text-base">{job.location}</p>
+                  <p className="text-gray-700 mt-3 sm:mt-4 text-sm sm:text-base leading-relaxed">{job.description?.substring(0, 180)}...</p>
+                  <p className="text-xs text-gray-400 mt-2">Source: {job.source}</p>
                 </div>
 
-                <div className="mt-6 flex gap-3">
-                  <button
-                    onClick={() => autoApply(job)}
-                    className="flex-1 bg-green-600 text-white p-4 rounded-2xl font-bold shadow-lg hover:scale-[1.02] transition"
-                  >
+                <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row gap-3">
+                  <button onClick={() => autoApply(job)} className="flex-1 bg-green-600 text-white p-3 sm:p-4 rounded-2xl font-bold shadow-lg hover:scale-[1.02] transition">
                     Auto Apply 🤖
                   </button>
-                  <button
-                    onClick={() => window.open(job.link, "_blank")}
-                    className="flex-1 bg-gray-200 text-gray-800 p-4 rounded-2xl font-bold shadow-lg hover:bg-gray-300 transition"
-                  >
+                  <button onClick={() => window.open(job.link, "_blank")} className="flex-1 bg-gray-200 text-gray-800 p-3 sm:p-4 rounded-2xl font-bold shadow-lg hover:bg-gray-300 transition">
                     Manual Apply
                   </button>
                 </div>
