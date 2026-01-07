@@ -19,6 +19,7 @@ interface Job {
   location: string;
   link: string;
   source: string;
+  remote?: boolean;
 }
 
 export default function FindJobsPage() {
@@ -29,8 +30,9 @@ export default function FindJobsPage() {
   const [skillInput, setSkillInput] = useState("");
   const [mobileMenu, setMobileMenu] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [filter, setFilter] = useState<"all" | "local" | "remote">("all");
 
-  // Mock user/applicant data for auto-apply
+  // Applicant info (mock for now)
   const user = {
     fullName: "Wayne Benhura",
     email: "wayne@email.com",
@@ -75,7 +77,7 @@ export default function FindJobsPage() {
         body: JSON.stringify({ country, keywords: skills }),
       });
       const data = await res.json();
-      setJobs(data.jobs || data); // support both structures
+      setJobs(data.jobs || data);
     } catch (e) {
       console.error("fetchJobs error", e);
       setJobs([]);
@@ -85,33 +87,20 @@ export default function FindJobsPage() {
 
   useEffect(() => {
     if (mounted) fetchJobs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted]);
 
-  // Auto apply function
-  const autoApply = async (job: Job) => {
-    try {
-      const res = await fetch("/api/auto-apply", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ job, user }),
-      });
+  // Filter jobs based on local / remote / out-of-country
+  const filteredJobs = jobs.filter((job) => {
+    const loc = job.location.toLowerCase();
+    if (filter === "local") return loc.includes(country.toLowerCase()) || loc.includes("zimbabwe");
+    if (filter === "remote") return job.remote || loc.includes("remote");
+    if (filter === "all") return true;
+    return true;
+  });
 
-      const data = await res.json();
-
-      if (data.redirect) {
-        window.open(data.redirect, "_blank");
-      } else {
-        alert(data.message || "Application sent successfully!");
-      }
-    } catch (e) {
-      console.error("Auto apply failed", e);
-      alert("Auto apply failed. Please try manually.");
-    }
-  };
-
-  // Manual apply fallback
-  const applyToJob = async (job: Job) => {
+  // Auto apply: open link in new tab, can be extended to API integration
+  const autoApply = (job: Job) => {
+    // Open job link directly
     window.open(job.link, "_blank");
   };
 
@@ -177,7 +166,7 @@ export default function FindJobsPage() {
 
       {/* FILTERS */}
       <section className="px-6 md:px-20 mb-10">
-        <div className="max-w-5xl mx-auto bg-white/80 backdrop-blur-xl p-8 rounded-3xl shadow-xl grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="max-w-5xl mx-auto bg-white/80 backdrop-blur-xl p-8 rounded-3xl shadow-xl grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div>
             <label className="text-gray-700 flex items-center gap-2 mb-2 font-semibold">
               <FiMapPin /> Country
@@ -188,6 +177,15 @@ export default function FindJobsPage() {
               className="p-4 border rounded-2xl w-full focus:ring-2 focus:ring-green-400 focus:outline-none"
               placeholder="Zimbabwe, South Africa, Remote"
             />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <span className="font-semibold text-gray-700">Filter Jobs</span>
+            <div className="flex gap-2">
+              <button onClick={() => setFilter("all")} className={`px-4 py-2 rounded-xl ${filter === "all" ? "bg-green-600 text-white" : "bg-gray-200"}`}>All</button>
+              <button onClick={() => setFilter("local")} className={`px-4 py-2 rounded-xl ${filter === "local" ? "bg-green-600 text-white" : "bg-gray-200"}`}>Local</button>
+              <button onClick={() => setFilter("remote")} className={`px-4 py-2 rounded-xl ${filter === "remote" ? "bg-green-600 text-white" : "bg-gray-200"}`}>Remote</button>
+            </div>
           </div>
 
           <div className="flex items-end">
@@ -255,18 +253,18 @@ export default function FindJobsPage() {
           <p className="text-center text-lg text-gray-700 animate-pulse">
             Loading jobs...
           </p>
-        ) : jobs.length === 0 ? (
+        ) : filteredJobs.length === 0 ? (
           <div className="text-center text-gray-700">
             <p className="text-lg font-semibold">
-              No jobs found. Showing global remote roles instead.
+              No jobs found for these filters.
             </p>
             <p className="text-sm text-gray-500 mt-2">
-              Tip: remove country or add more skills.
+              Tip: adjust country, filter, or add skills.
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-7xl mx-auto">
-            {jobs.map((job, idx) => (
+            {filteredJobs.map((job, idx) => (
               <div
                 key={idx}
                 className="bg-white/90 backdrop-blur-xl p-7 rounded-3xl shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 flex flex-col justify-between"
@@ -297,7 +295,7 @@ export default function FindJobsPage() {
                     Auto Apply 🤖
                   </button>
                   <button
-                    onClick={() => applyToJob(job)}
+                    onClick={() => window.open(job.link, "_blank")}
                     className="flex-1 bg-gray-200 text-gray-800 p-4 rounded-2xl font-bold shadow-lg hover:bg-gray-300 transition"
                   >
                     Manual Apply
