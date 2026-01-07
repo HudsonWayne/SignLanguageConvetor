@@ -25,13 +25,11 @@ async function safeFetch(url: string) {
 }
 
 /* ====================== STEP 1: LISTINGS ===================== */
-/**
- * Crawl MULTIPLE pages to get MANY job links
- */
+
 async function fetchListingLinks() {
   const links = new Set<string>();
 
-  // Crawl first 5 pages (safe & realistic)
+  // Crawl multiple pages for MANY real jobs
   for (let page = 1; page <= 5; page++) {
     const url =
       page === 1
@@ -65,9 +63,9 @@ async function fetchJobDetails(url: string) {
   const title = clean($("h1").first().text());
   if (!title) return null;
 
-  const company = clean(
-    $(".card-block-company h3 a").first().text()
-  );
+  const company =
+    clean($(".card-block-company h3 a").first().text()) ||
+    "Unknown Company";
 
   const location =
     clean($(".withicon.location-dot span").first().text()) ||
@@ -92,7 +90,7 @@ async function fetchJobDetails(url: string) {
 
   return {
     title,
-    company: company || "Unknown Company",
+    company,
     location,
     description,
     salary,
@@ -108,19 +106,21 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
 
   const country = (body.country || "").toLowerCase();
-  const keywords: string[] = body.keywords || [];
+  const keywords: string[] = Array.isArray(body.keywords)
+    ? body.keywords
+    : [];
 
   /* 1️⃣ Get MANY job links */
   const links = await fetchListingLinks();
 
-  /* 2️⃣ Fetch MANY job details (limit for safety) */
+  /* 2️⃣ Fetch MANY job details */
   const jobsRaw = await Promise.all(
     links.slice(0, 60).map(fetchJobDetails)
   );
 
   let jobs = jobsRaw.filter(Boolean) as any[];
 
-  /* 3️⃣ SMART location filter */
+  /* 3️⃣ Location filter */
   if (country) {
     jobs = jobs.filter((j) => {
       const loc = j.location.toLowerCase();
@@ -147,7 +147,7 @@ export async function POST(req: Request) {
     );
   }
 
-  /* 5️⃣ Fallback: still return LOCAL jobs */
+  /* 5️⃣ Fallback to local Zimbabwe jobs */
   if (!jobs.length) {
     jobs = jobsRaw.filter(
       (j) =>
@@ -156,8 +156,6 @@ export async function POST(req: Request) {
     ) as any[];
   }
 
-  return NextResponse.json({
-    count: jobs.length,
-    jobs: jobs.slice(0, 100),
-  });
+  // ✅ RETURN ARRAY (frontend-safe)
+  return NextResponse.json(jobs.slice(0, 100));
 }
