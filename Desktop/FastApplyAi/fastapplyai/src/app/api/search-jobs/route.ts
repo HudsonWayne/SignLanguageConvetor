@@ -1,4 +1,3 @@
-// src/app/api/search-jobs/route.ts
 import { NextResponse } from "next/server";
 import { load } from "cheerio";
 
@@ -46,28 +45,31 @@ async function fetchJobDetails(url: string, source = "ZimbaJob") {
   const html = await safeFetch(url);
   if (!html) return null;
   const $ = load(html);
+
   const title = clean($("h1").first().text());
   if (!title) return null;
+
   const company = clean($(".card-block-company h3 a").first().text()) || "Unknown Company";
   const location =
     clean($(".withicon.location-dot span").first().text()) ||
     clean($("li:contains('Region') span").text()) ||
     "Zimbabwe";
+
   const description = clean($(".job-description").text() + " " + $(".job-qualifications").text());
-  const salary = clean($("li:contains('Salary') span").text());
   const skills: string[] = [];
   $(".skills li").each((_, el) => {
     const s = clean($(el).text());
     if (s) skills.push(s);
   });
-  return { title, company, location, description, salary, skills, link: url, source };
+
+  return { title, company, location, description, skills, link: url, source };
 }
 
-/* ====================== STEP 3: MULTI-SOURCE ======================= */
+/* ====================== STEP 3: OTHER SOURCES (Indeed + LinkedIn) ======================= */
 async function fetchOtherSources(country: string) {
   const jobs: any[] = [];
 
-  // Example: Mock Indeed scraping (replace with real scraping if allowed)
+  // Mock Indeed scraping (replace with real if allowed)
   const indeedUrl = `https://www.indeed.com/jobs?q=&l=${country}`;
   const html = await safeFetch(indeedUrl);
   if (html) {
@@ -76,15 +78,21 @@ async function fetchOtherSources(country: string) {
       const title = clean($(el).text());
       const link = $(el).attr("href")?.startsWith("http") ? $(el).attr("href") : "https://www.indeed.com" + $(el).attr("href");
       if (title && link) {
-        jobs.push({
-          title,
-          company: "Unknown Company",
-          location: country,
-          description: "",
-          skills: [],
-          link,
-          source: "Indeed",
-        });
+        jobs.push({ title, company: "Unknown Company", location: country, description: "", skills: [], link, source: "Indeed" });
+      }
+    });
+  }
+
+  // Mock LinkedIn scraping (replace with real if allowed)
+  const linkedInUrl = `https://www.linkedin.com/jobs/search/?location=${country}&keywords=`;
+  const html2 = await safeFetch(linkedInUrl);
+  if (html2) {
+    const $ = load(html2);
+    $("a.result-card__full-card-link").each((_, el) => {
+      const title = clean($(el).text());
+      const link = $(el).attr("href");
+      if (title && link) {
+        jobs.push({ title, company: "Unknown Company", location: country, description: "", skills: [], link, source: "LinkedIn" });
       }
     });
   }
@@ -101,11 +109,7 @@ export async function POST(req: Request) {
   // 1️⃣ ZimbaJob links
   const links = await fetchZimbaJobLinks();
   const zimbaJobsRaw = await Promise.all(links.slice(0, 60).map((url) => fetchJobDetails(url)));
-
-  let jobs = (zimbaJobsRaw.filter(Boolean) as any[]).map((job) => ({
-    ...job,
-    match: 0, // placeholder for match %
-  }));
+  let jobs = (zimbaJobsRaw.filter(Boolean) as any[]).map((job) => ({ ...job, match: 0 }));
 
   // 2️⃣ Other sources
   const otherJobs = await fetchOtherSources(country);
@@ -115,11 +119,7 @@ export async function POST(req: Request) {
   jobs = jobs.map((job) => {
     let score = 0;
     const titleDesc = (job.title + " " + job.description + " " + job.skills.join(" ")).toLowerCase();
-    // Skill matching
-    keywords.forEach((k) => {
-      if (titleDesc.includes(k.toLowerCase())) score += 20;
-    });
-    // Location boost
+    keywords.forEach((k) => { if (titleDesc.includes(k.toLowerCase())) score += 20; });
     if (job.location.toLowerCase().includes(country)) score += 30;
     if (job.location.toLowerCase().includes("remote")) score += 10;
     if (score > 100) score = 100;
