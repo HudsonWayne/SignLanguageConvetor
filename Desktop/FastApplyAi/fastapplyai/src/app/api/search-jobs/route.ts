@@ -19,7 +19,7 @@ async function safeFetch(url: string) {
   }
 }
 
-/* ====================== STEP 1: ZIMBAJOB LISTINGS ===================== */
+/* ====================== ZIMBAJOB SCRAPER ====================== */
 async function fetchZimbaJobLinks() {
   const links = new Set<string>();
   for (let page = 1; page <= 3; page++) {
@@ -40,8 +40,7 @@ async function fetchZimbaJobLinks() {
   return Array.from(links);
 }
 
-/* ===================== STEP 2: DETAILS ======================= */
-async function fetchJobDetails(url: string, source = "ZimbaJob") {
+async function fetchZimbaJobDetails(url: string) {
   const html = await safeFetch(url);
   if (!html) return null;
   const $ = load(html);
@@ -62,42 +61,35 @@ async function fetchJobDetails(url: string, source = "ZimbaJob") {
     if (s) skills.push(s);
   });
 
-  return { title, company, location, description, skills, link: url, source };
+  return { title, company, location, description, skills, link: url, source: "ZimbaJob" };
 }
 
-/* ====================== STEP 3: OTHER SOURCES (Indeed + LinkedIn) ======================= */
-async function fetchOtherSources(country: string) {
+/* ====================== INDEED SCRAPER ====================== */
+async function fetchIndeedJobs(country: string) {
   const jobs: any[] = [];
+  const url = `https://www.indeed.com/jobs?q=&l=${country}`;
 
-  // Mock Indeed scraping (replace with real if allowed)
-  const indeedUrl = `https://www.indeed.com/jobs?q=&l=${country}`;
-  const html = await safeFetch(indeedUrl);
-  if (html) {
-    const $ = load(html);
-    $("a.jobtitle").each((_, el) => {
-      const title = clean($(el).text());
-      const link = $(el).attr("href")?.startsWith("http") ? $(el).attr("href") : "https://www.indeed.com" + $(el).attr("href");
-      if (title && link) {
-        jobs.push({ title, company: "Unknown Company", location: country, description: "", skills: [], link, source: "Indeed" });
-      }
-    });
-  }
+  const html = await safeFetch(url);
+  if (!html) return jobs;
 
-  // Mock LinkedIn scraping (replace with real if allowed)
-  const linkedInUrl = `https://www.linkedin.com/jobs/search/?location=${country}&keywords=`;
-  const html2 = await safeFetch(linkedInUrl);
-  if (html2) {
-    const $ = load(html2);
-    $("a.result-card__full-card-link").each((_, el) => {
-      const title = clean($(el).text());
-      const link = $(el).attr("href");
-      if (title && link) {
-        jobs.push({ title, company: "Unknown Company", location: country, description: "", skills: [], link, source: "LinkedIn" });
-      }
-    });
-  }
+  const $ = load(html);
+  $("a.tapItem").each((_, el) => {
+    const title = clean($(el).find(".jobTitle span").first().text());
+    const company = clean($(el).find(".companyName").text()) || "Unknown Company";
+    const location = clean($(el).find(".companyLocation").text()) || country;
+    const description = clean($(el).find(".job-snippet").text());
+    const link = $(el).attr("href")?.startsWith("http") ? $(el).attr("href") : `https://www.indeed.com${$(el).attr("href")}`;
+    if (title && link) jobs.push({ title, company, location, description, skills: [], link, source: "Indeed" });
+  });
 
   return jobs;
+}
+
+/* ====================== LINKEDIN SCRAPER (PLACEHOLDER) ====================== */
+async function fetchLinkedInJobs(country: string) {
+  // ⚠️ LinkedIn blocks scraping, need Playwright or RSS feeds.
+  // For now we return empty array; you can replace this with Playwright later.
+  return [];
 }
 
 /* ============================ API ============================ */
@@ -106,29 +98,47 @@ export async function POST(req: Request) {
   const country = (body.country || "").toLowerCase();
   const keywords: string[] = Array.isArray(body.keywords) ? body.keywords : [];
 
-  // 1️⃣ ZimbaJob links
-  const links = await fetchZimbaJobLinks();
-  const zimbaJobsRaw = await Promise.all(links.slice(0, 60).map((url) => fetchJobDetails(url)));
-  let jobs = (zimbaJobsRaw.filter(Boolean) as any[]).map((job) => ({ ...job, match: 0 }));
+  /* 1️⃣ Fetch jobs from all sources */
+  const zimbaLinks = await fetchZimbaJobLinks();
+  const zimbaJobsRaw = await Promise.all(zimbaLinks.map(fetchZimbaJobDetails));
+  const zimbaJobs = zimbaJobsRaw.filter(Boolean) as any[];
 
-  // 2️⃣ Other sources
-  const otherJobs = await fetchOtherSources(country);
-  jobs = [...jobs, ...otherJobs];
+  const indeedJobs = await fetchIndeedJobs(country);
+  const linkedInJobs = await fetchLinkedInJobs(country);
 
-  // 3️⃣ Compute match %
-  jobs = jobs.map((job) => {
+  let jobs: any[] = [...zimbaJobs, ...indeedJobs, ...linkedInJobs];
+
+  /* 2️⃣ Filter by country / remote */
+  if (country) {
+    jobs = jobs.filter(j => {
+      const loc = j.location.toLowerCase();
+      return loc.includes(country) || loc.includes("zimbabwe") || loc.includes("remote");
+    });
+  }
+
+  /* 3️⃣ Skill matching */
+  if (keywords.length) {
+    const kw = keywords.map(k => k.toLowerCase());
+    jobs = jobs.filter(j => {
+      const text = (j.title + " " + j.description + " " + (j.skills || []).join(" ")).toLowerCase();
+      return kw.some(k => text.includes(k));
+    });
+  }
+
+  /* 4️⃣ Compute match % */
+  jobs = jobs.map(j => {
     let score = 0;
-    const titleDesc = (job.title + " " + job.description + " " + job.skills.join(" ")).toLowerCase();
-    keywords.forEach((k) => { if (titleDesc.includes(k.toLowerCase())) score += 20; });
-    if (job.location.toLowerCase().includes(country)) score += 30;
-    if (job.location.toLowerCase().includes("remote")) score += 10;
+    const text = (j.title + " " + j.description + " " + (j.skills || []).join(" ")).toLowerCase();
+    keywords.forEach(k => { if (text.includes(k.toLowerCase())) score += 25; });
+    if (j.location.toLowerCase().includes(country)) score += 30;
+    if (j.location.toLowerCase().includes("remote")) score += 10;
     if (score > 100) score = 100;
-    return { ...job, match: score };
+    return { ...j, match: score };
   });
 
-  // 4️⃣ Sort by match %
+  /* 5️⃣ Sort by match % */
   jobs.sort((a, b) => b.match - a.match);
 
-  // 5️⃣ Return top 100 jobs
+  /* 6️⃣ Return top 100 */
   return NextResponse.json(jobs.slice(0, 100));
 }
