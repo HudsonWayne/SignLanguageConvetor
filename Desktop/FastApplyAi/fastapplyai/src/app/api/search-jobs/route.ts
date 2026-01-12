@@ -22,12 +22,17 @@ function clean(text = "") {
 async function safeFetch(url: string) {
   try {
     const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (QuickApplyAI Bot)" },
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+      },
       cache: "no-store",
     });
     if (!res.ok) return "";
     return await res.text();
-  } catch {
+  } catch (e) {
+    console.error("safeFetch failed for", url, e);
     return "";
   }
 }
@@ -36,74 +41,90 @@ async function safeFetch(url: string) {
 async function fetchZimbaJobLinks(): Promise<string[]> {
   const links = new Set<string>();
   for (let page = 1; page <= 3; page++) {
-    const url =
-      page === 1
-        ? "https://www.zimbajob.com/job-vacancies-search-zimbabwe"
-        : `https://www.zimbajob.com/job-vacancies-search-zimbabwe?page=${page}`;
-    const html = await safeFetch(url);
-    if (!html) continue;
-    const $ = load(html);
-    $("h3 a").each((_, el) => {
-      const href = $(el).attr("href");
-      if (href && href.includes("/job-vacancies-zimbabwe/")) {
-        links.add(`https://www.zimbajob.com${href}`);
-      }
-    });
+    try {
+      const url =
+        page === 1
+          ? "https://www.zimbajob.com/job-vacancies-search-zimbabwe"
+          : `https://www.zimbajob.com/job-vacancies-search-zimbabwe?page=${page}`;
+      const html = await safeFetch(url);
+      if (!html) continue;
+      const $ = load(html);
+      $("h3 a").each((_, el) => {
+        const href = $(el).attr("href");
+        if (href && href.includes("/job-vacancies-zimbabwe/")) {
+          links.add(`https://www.zimbajob.com${href}`);
+        }
+      });
+    } catch (e) {
+      console.error("ZimbaJob page failed", page, e);
+      continue;
+    }
   }
   return Array.from(links);
 }
 
 async function fetchZimbaJobDetails(url: string): Promise<Job | null> {
-  const html = await safeFetch(url);
-  if (!html) return null;
+  try {
+    const html = await safeFetch(url);
+    if (!html) return null;
+    const $ = load(html);
 
-  const $ = load(html);
-  const title = clean($("h1").first().text());
-  if (!title) return null;
+    const title = clean($("h1").first().text());
+    if (!title) return null;
 
-  const company = clean($(".card-block-company h3 a").first().text()) || "Unknown Company";
-  const location =
-    clean($(".withicon.location-dot span").first().text()) ||
-    clean($("li:contains('Region') span").text()) ||
-    "Zimbabwe";
+    const company = clean($(".card-block-company h3 a").first().text()) || "Unknown Company";
+    const location =
+      clean($(".withicon.location-dot span").first().text()) ||
+      clean($("li:contains('Region') span").text()) ||
+      "Zimbabwe";
 
-  const description = clean($(".job-description").text() + " " + $(".job-qualifications").text());
+    const description = clean($(".job-description").text() + " " + $(".job-qualifications").text());
 
-  const skills: string[] = [];
-  $(".skills li").each((_, el) => {
-    const s = clean($(el).text());
-    if (s) skills.push(s);
-  });
+    const skills: string[] = [];
+    $(".skills li").each((_, el) => {
+      const s = clean($(el).text());
+      if (s) skills.push(s);
+    });
 
-  return { title, company, location, description, skills, link: url, source: "ZimbaJob" };
+    return { title, company, location, description, skills, link: url, source: "ZimbaJob" };
+  } catch (e) {
+    console.error("ZimbaJob details failed for", url, e);
+    return null;
+  }
 }
 
 /* ====================== INDEED SCRAPER ====================== */
 async function fetchIndeedJobs(country: string): Promise<Job[]> {
   const jobs: Job[] = [];
-  const url = `https://www.indeed.com/jobs?q=&l=${country}`;
-  const html = await safeFetch(url);
-  if (!html) return jobs;
+  try {
+    const url = `https://www.indeed.com/jobs?q=&l=${country}`;
+    const html = await safeFetch(url);
+    if (!html) return jobs;
 
-  const $ = load(html);
-  $("a.tapItem").each((_, el) => {
-    const title = clean($(el).find(".jobTitle span").first().text());
-    const company = clean($(el).find(".companyName").text()) || "Unknown Company";
-    const location = clean($(el).find(".companyLocation").text()) || country;
-    const description = clean($(el).find(".job-snippet").text());
-    const link = $(el).attr("href")?.startsWith("http")
-      ? $(el).attr("href")
-      : `https://www.indeed.com${$(el).attr("href")}`;
-    if (title && link) jobs.push({ title, company, location, description, skills: [], link, source: "Indeed" });
-  });
+    const $ = load(html);
 
+    $("a").each((_, el) => {
+      const title = clean($(el).find(".jobTitle").text() || "");
+      if (!title) return;
+
+      const company = clean($(el).find(".companyName").text()) || "Unknown Company";
+      const location = clean($(el).find(".companyLocation").text()) || country;
+      const description = clean($(el).find(".job-snippet").text());
+      const link = $(el).attr("href");
+      if (!link) return;
+
+      const fullLink = link.startsWith("http") ? link : `https://www.indeed.com${link}`;
+      jobs.push({ title, company, location, description, skills: [], link: fullLink, source: "Indeed" });
+    });
+  } catch (e) {
+    console.error("Indeed fetch failed", e);
+  }
   return jobs;
 }
 
 /* ====================== LINKEDIN SCRAPER (PLACEHOLDER) ====================== */
 async function fetchLinkedInJobs(country: string): Promise<Job[]> {
-  // LinkedIn blocks scraping; placeholder for future Playwright implementation
-  return [];
+  return []; // blocked by LinkedIn; placeholder
 }
 
 /* ============================ API ============================ */
