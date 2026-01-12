@@ -1,5 +1,4 @@
 "use client";
-
 import Link from "next/link";
 import { FiUpload, FiSearch, FiBell, FiUser, FiMenu, FiX, FiMapPin } from "react-icons/fi";
 import { useEffect, useState } from "react";
@@ -29,9 +28,7 @@ export default function FindJobsPage() {
   useEffect(() => {
     setMounted(true);
     const stored = localStorage.getItem("skills");
-    if (stored) {
-      try { setSkills(JSON.parse(stored)); } catch {}
-    }
+    if (stored) setSkills(JSON.parse(stored));
     const saved = localStorage.getItem("savedJobs");
     if (saved) setSavedJobs(JSON.parse(saved));
   }, []);
@@ -68,17 +65,12 @@ export default function FindJobsPage() {
   const filteredJobs = jobs.filter((job) => {
     const loc = job.location.toLowerCase();
     if (filter === "local") return loc.includes(country.toLowerCase());
-    if (filter === "remote") return job.remote || loc.includes("remote");
+    if (filter === "remote") return loc.includes("remote");
     return true;
   });
 
   const autoApply = (job: Job) => window.open(job.link, "_blank");
-
-  const saveJob = (job: Job) => {
-    const next = [...savedJobs, job];
-    setSavedJobs(next);
-    localStorage.setItem("savedJobs", JSON.stringify(next));
-  };
+  const saveJob = (job: Job) => { const next = [...savedJobs, job]; setSavedJobs(next); localStorage.setItem("savedJobs", JSON.stringify(next)); };
 
   if (!mounted) return <div className="min-h-screen bg-slate-100" />;
 
@@ -95,8 +87,6 @@ export default function FindJobsPage() {
             <Link href="/dashboard" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-500 text-white hover:bg-green-600 transition"><FiUser /> Dashboard</Link>
             <Link href="/upload-cv" className="flex items-center gap-2 hover:text-green-600 transition"><FiUpload /> Upload CV</Link>
             <Link href="/find-jobs" className="flex items-center gap-2 text-green-600 font-semibold"><FiSearch /> Find Jobs</Link>
-            <Link href="/applied" className="hover:text-green-600 transition">Applied Jobs</Link>
-            <Link href="/notifications" className="flex items-center gap-2 hover:text-green-600 transition"><FiBell /> Notifications</Link>
           </div>
           <button onClick={() => setMobileMenu(!mobileMenu)} className="md:hidden text-2xl text-gray-700">{mobileMenu ? <FiX /> : <FiMenu />}</button>
         </div>
