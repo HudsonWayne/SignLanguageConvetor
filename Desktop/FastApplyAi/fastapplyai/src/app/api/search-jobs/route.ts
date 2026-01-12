@@ -1,5 +1,18 @@
+// src/app/api/search-jobs/route.ts
 import { NextResponse } from "next/server";
 import { load } from "cheerio";
+
+/* ========================== TYPES ========================== */
+interface Job {
+  title: string;
+  company: string;
+  location: string;
+  description: string;
+  skills: string[];
+  link: string;
+  source: string;
+  match?: number;
+}
 
 /* ========================== HELPERS ========================== */
 function clean(text = "") {
@@ -20,7 +33,7 @@ async function safeFetch(url: string) {
 }
 
 /* ====================== ZIMBAJOB SCRAPER ====================== */
-async function fetchZimbaJobLinks() {
+async function fetchZimbaJobLinks(): Promise<string[]> {
   const links = new Set<string>();
   for (let page = 1; page <= 3; page++) {
     const url =
@@ -40,11 +53,11 @@ async function fetchZimbaJobLinks() {
   return Array.from(links);
 }
 
-async function fetchZimbaJobDetails(url: string) {
+async function fetchZimbaJobDetails(url: string): Promise<Job | null> {
   const html = await safeFetch(url);
   if (!html) return null;
-  const $ = load(html);
 
+  const $ = load(html);
   const title = clean($("h1").first().text());
   if (!title) return null;
 
@@ -55,6 +68,7 @@ async function fetchZimbaJobDetails(url: string) {
     "Zimbabwe";
 
   const description = clean($(".job-description").text() + " " + $(".job-qualifications").text());
+
   const skills: string[] = [];
   $(".skills li").each((_, el) => {
     const s = clean($(el).text());
@@ -65,10 +79,9 @@ async function fetchZimbaJobDetails(url: string) {
 }
 
 /* ====================== INDEED SCRAPER ====================== */
-async function fetchIndeedJobs(country: string) {
-  const jobs: any[] = [];
+async function fetchIndeedJobs(country: string): Promise<Job[]> {
+  const jobs: Job[] = [];
   const url = `https://www.indeed.com/jobs?q=&l=${country}`;
-
   const html = await safeFetch(url);
   if (!html) return jobs;
 
@@ -78,7 +91,9 @@ async function fetchIndeedJobs(country: string) {
     const company = clean($(el).find(".companyName").text()) || "Unknown Company";
     const location = clean($(el).find(".companyLocation").text()) || country;
     const description = clean($(el).find(".job-snippet").text());
-    const link = $(el).attr("href")?.startsWith("http") ? $(el).attr("href") : `https://www.indeed.com${$(el).attr("href")}`;
+    const link = $(el).attr("href")?.startsWith("http")
+      ? $(el).attr("href")
+      : `https://www.indeed.com${$(el).attr("href")}`;
     if (title && link) jobs.push({ title, company, location, description, skills: [], link, source: "Indeed" });
   });
 
@@ -86,9 +101,8 @@ async function fetchIndeedJobs(country: string) {
 }
 
 /* ====================== LINKEDIN SCRAPER (PLACEHOLDER) ====================== */
-async function fetchLinkedInJobs(country: string) {
-  // ⚠️ LinkedIn blocks scraping, need Playwright or RSS feeds.
-  // For now we return empty array; you can replace this with Playwright later.
+async function fetchLinkedInJobs(country: string): Promise<Job[]> {
+  // LinkedIn blocks scraping; placeholder for future Playwright implementation
   return [];
 }
 
@@ -98,17 +112,17 @@ export async function POST(req: Request) {
   const country = (body.country || "").toLowerCase();
   const keywords: string[] = Array.isArray(body.keywords) ? body.keywords : [];
 
-  /* 1️⃣ Fetch jobs from all sources */
+  // 1️⃣ Fetch jobs from all sources
   const zimbaLinks = await fetchZimbaJobLinks();
   const zimbaJobsRaw = await Promise.all(zimbaLinks.map(fetchZimbaJobDetails));
-  const zimbaJobs = zimbaJobsRaw.filter(Boolean) as any[];
+  const zimbaJobs = zimbaJobsRaw.filter(Boolean) as Job[];
 
   const indeedJobs = await fetchIndeedJobs(country);
   const linkedInJobs = await fetchLinkedInJobs(country);
 
-  let jobs: any[] = [...zimbaJobs, ...indeedJobs, ...linkedInJobs];
+  let jobs: Job[] = [...zimbaJobs, ...indeedJobs, ...linkedInJobs];
 
-  /* 2️⃣ Filter by country / remote */
+  // 2️⃣ Filter by country / remote
   if (country) {
     jobs = jobs.filter(j => {
       const loc = j.location.toLowerCase();
@@ -116,7 +130,7 @@ export async function POST(req: Request) {
     });
   }
 
-  /* 3️⃣ Skill matching */
+  // 3️⃣ Skill matching
   if (keywords.length) {
     const kw = keywords.map(k => k.toLowerCase());
     jobs = jobs.filter(j => {
@@ -125,7 +139,7 @@ export async function POST(req: Request) {
     });
   }
 
-  /* 4️⃣ Compute match % */
+  // 4️⃣ Compute match %
   jobs = jobs.map(j => {
     let score = 0;
     const text = (j.title + " " + j.description + " " + (j.skills || []).join(" ")).toLowerCase();
@@ -136,9 +150,9 @@ export async function POST(req: Request) {
     return { ...j, match: score };
   });
 
-  /* 5️⃣ Sort by match % */
-  jobs.sort((a, b) => b.match - a.match);
+  // 5️⃣ Sort by match %
+  jobs.sort((a, b) => (b.match || 0) - (a.match || 0));
 
-  /* 6️⃣ Return top 100 */
+  // 6️⃣ Return top 100 jobs
   return NextResponse.json(jobs.slice(0, 100));
 }
