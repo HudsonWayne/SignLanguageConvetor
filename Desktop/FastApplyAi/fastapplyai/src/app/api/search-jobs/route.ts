@@ -1,4 +1,3 @@
-// src/app/api/search-jobs/route.ts
 import { NextResponse } from "next/server";
 import { load } from "cheerio";
 
@@ -15,165 +14,100 @@ interface Job {
 }
 
 /* ========================== HELPERS ========================== */
-function clean(text = "") {
-  return text.replace(/\s+/g, " ").trim();
-}
+const clean = (t = "") => t.replace(/\s+/g, " ").trim();
 
-async function safeFetch(url: string): Promise<string> {
+async function safeFetch(url: string) {
   try {
     const res = await fetch(url, {
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
-        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120",
       },
       cache: "no-store",
     });
     if (!res.ok) return "";
     return await res.text();
-  } catch (e) {
-    console.error("safeFetch failed for", url, e);
+  } catch {
     return "";
   }
 }
 
-/* ====================== ZIMBAJOB SCRAPER (may fail without Playwright) ====================== */
-async function fetchZimbaJobLinks(): Promise<string[]> {
-  const links = new Set<string>();
-  for (let page = 1; page <= 3; page++) {
-    try {
-      const url =
-        page === 1
-          ? "https://www.zimbajob.com/job-vacancies-search-zimbabwe"
-          : `https://www.zimbajob.com/job-vacancies-search-zimbabwe?page=${page}`;
-      const html = await safeFetch(url);
-      if (!html) continue;
-      const $ = load(html);
-      $("h3 a").each((_, el) => {
-        const href = $(el).attr("href");
-        if (href && href.includes("/job-vacancies-zimbabwe/")) {
-          links.add(`https://www.zimbajob.com${href}`);
-        }
-      });
-    } catch (e) {
-      console.error("ZimbaJob page failed", page, e);
-      continue;
-    }
-  }
-  return Array.from(links);
-}
-
-async function fetchZimbaJobDetails(url: string): Promise<Job | null> {
-  try {
-    const html = await safeFetch(url);
-    if (!html) return null;
-    const $ = load(html);
-
-    const title = clean($("h1").first().text());
-    if (!title) return null;
-
-    const company = clean($(".card-block-company h3 a").first().text()) || "Unknown Company";
-    const location =
-      clean($(".withicon.location-dot span").first().text()) ||
-      clean($("li:contains('Region') span").text()) ||
-      "Zimbabwe";
-
-    const description = clean($(".job-description").text() + " " + $(".job-qualifications").text());
-    const skills: string[] = [];
-    $(".skills li").each((_, el) => {
-      const s = clean($(el).text());
-      if (s) skills.push(s);
-    });
-
-    return { title, company, location, description, skills, link: url, source: "ZimbaJob" };
-  } catch (e) {
-    console.error("ZimbaJob details failed for", url, e);
-    return null;
-  }
-}
-
-/* ====================== INDEED SCRAPER ====================== */
-async function fetchIndeedJobs(country: string): Promise<Job[]> {
+/* ====================== ZIMBAJOB ====================== */
+async function fetchZimbaJobs(): Promise<Job[]> {
   const jobs: Job[] = [];
-  try {
-    const url = `https://www.indeed.com/jobs?q=&l=${country}`;
-    const html = await safeFetch(url);
-    if (!html) return jobs;
+  const base = "https://www.zimbajob.com";
 
-    const $ = load(html);
+  const html = await safeFetch(
+    "https://www.zimbajob.com/job-vacancies-search-zimbabwe"
+  );
+  if (!html) return jobs;
 
-    // Updated selectors for Indeed
-    $("a.jcs-JobTitle").each((_, el) => {
-      const title = clean($(el).text());
-      if (!title) return;
+  const $ = load(html);
 
-      const parent = $(el).closest(".result");
-      const company = clean(parent.find(".companyName").text()) || "Unknown Company";
-      const location = clean(parent.find(".companyLocation").text()) || country;
-      const description = clean(parent.find(".job-snippet").text());
-      const linkPartial = $(el).attr("href");
-      if (!linkPartial) return;
+  $("a.job-title").each((_, el) => {
+    const title = clean($(el).text());
+    const href = $(el).attr("href");
+    if (!title || !href) return;
 
-      const fullLink = linkPartial.startsWith("http") ? linkPartial : `https://www.indeed.com${linkPartial}`;
-      jobs.push({ title, company, location, description, skills: [], link: fullLink, source: "Indeed" });
+    const card = $(el).closest(".job-listing");
+
+    const company =
+      clean(card.find(".company-name").text()) || "Unknown Company";
+
+    const location =
+      clean(card.find(".job-location").text()) || "Zimbabwe";
+
+    const description =
+      clean(card.find(".job-description").text()) ||
+      "See full description on employer site.";
+
+    jobs.push({
+      title,
+      company,
+      location,
+      description,
+      skills: [],
+      link: href.startsWith("http") ? href : `${base}${href}`,
+      source: "ZimbaJob",
     });
-  } catch (e) {
-    console.error("Indeed fetch failed", e);
-  }
-  return jobs;
-}
+  });
 
-/* ====================== LINKEDIN SCRAPER (placeholder) ====================== */
-async function fetchLinkedInJobs(country: string): Promise<Job[]> {
-  return []; // blocked by LinkedIn
+  return jobs;
 }
 
 /* ============================ API ============================ */
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const country = (body.country || "").toLowerCase();
-  const keywords: string[] = Array.isArray(body.keywords) ? body.keywords : [];
+  const keywords: string[] = body.keywords || [];
 
-  // Fetch jobs
-  const zimbaLinks = await fetchZimbaJobLinks();
-  const zimbaJobsRaw = await Promise.all(zimbaLinks.map(fetchZimbaJobDetails));
-  const zimbaJobs = zimbaJobsRaw.filter(Boolean) as Job[];
+  let jobs = await fetchZimbaJobs();
 
-  const indeedJobs = await fetchIndeedJobs(country);
-  const linkedInJobs = await fetchLinkedInJobs(country);
-
-  let jobs: Job[] = [...zimbaJobs, ...indeedJobs, ...linkedInJobs];
-
-  // Filter by country / remote
+  /* COUNTRY FILTER (SOFT) */
   if (country) {
-    jobs = jobs.filter(j => {
-      const loc = j.location.toLowerCase();
-      return loc.includes(country) || loc.includes("zimbabwe") || loc.includes("remote");
-    });
+    jobs = jobs.filter(j =>
+      j.location.toLowerCase().includes(country) ||
+      country.includes("zim")
+    );
   }
 
-  // Filter by keywords
-  if (keywords.length) {
-    const kw = keywords.map(k => k.toLowerCase());
-    jobs = jobs.filter(j => {
-      const text = (j.title + " " + j.description + " " + (j.skills || []).join(" ")).toLowerCase();
-      return kw.some(k => text.includes(k));
-    });
-  }
-
-  // Compute match %
+  /* MATCH SCORE */
   jobs = jobs.map(j => {
-    let score = 0;
-    const text = (j.title + " " + j.description + " " + (j.skills || []).join(" ")).toLowerCase();
-    keywords.forEach(k => { if (text.includes(k.toLowerCase())) score += 25; });
-    if (j.location.toLowerCase().includes(country)) score += 30;
-    if (j.location.toLowerCase().includes("remote")) score += 10;
+    let score = 20; // base score
+
+    const text = `${j.title} ${j.description}`.toLowerCase();
+
+    keywords.forEach(k => {
+      if (text.includes(k.toLowerCase())) score += 10;
+    });
+
+    if (j.location.toLowerCase().includes("remote")) score += 15;
     if (score > 100) score = 100;
+
     return { ...j, match: score };
   });
 
   jobs.sort((a, b) => (b.match || 0) - (a.match || 0));
 
-  return NextResponse.json(jobs.slice(0, 100));
+  return NextResponse.json(jobs.slice(0, 50));
 }
