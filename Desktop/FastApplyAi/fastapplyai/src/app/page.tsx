@@ -17,9 +17,9 @@ export default function HomePage() {
 
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
+      setIsMobile(window.innerWidth < 768); // mobile breakpoint
       if (window.innerWidth >= 768) {
-        setMobileMenu(false);
+        setMobileMenu(false); // close menu on desktop
       }
     };
     handleResize();
@@ -29,9 +29,7 @@ export default function HomePage() {
 
   return (
     <div
-      className={`min-h-screen bg-gradient-to-br from-purple-300 via-blue-200 to-green-200 text-gray-900 font-sans overflow-x-hidden bg-[length:200%_200%] ${
-        isMobile ? "" : "animate-gradientFlow"
-      }`}
+      className={`min-h-screen bg-gradient-to-br from-purple-300 via-blue-200 to-green-200 text-gray-900 font-sans overflow-x-hidden bg-[length:200%_200%]`}
     >
       {/* NAVBAR */}
       <nav className="relative flex items-center justify-between px-4 sm:px-6 md:px-10 lg:px-20 xl:px-24 2xl:px-40 py-4 shadow-md bg-white sticky top-0 z-50 backdrop-blur-md bg-opacity-90 w-full max-w-[1920px] mx-auto">
@@ -47,45 +45,22 @@ export default function HomePage() {
 
         {/* Desktop Menu */}
         <div className="hidden md:flex items-center gap-4 lg:gap-8 text-sm text-gray-700 font-medium">
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-1 bg-green-500 text-white px-3 py-2 rounded-md hover:bg-green-600 transition-all shadow-sm"
-          >
+          <Link href="/dashboard" className="flex items-center gap-1 bg-green-500 text-white px-3 py-2 rounded-md hover:bg-green-600 transition-all shadow-sm">
             <FiUser /> Dashboard
           </Link>
-
-          <Link
-            href="/upload-cv"
-            className="flex items-center gap-1 hover:text-green-600 transition-all"
-          >
+          <Link href="/upload-cv" className="flex items-center gap-1 hover:text-green-600 transition-all">
             <FiUpload /> Upload CV
           </Link>
-
-          <Link
-            href="/find-jobs"
-            className="flex items-center gap-1 hover:text-green-600 transition-all"
-          >
+          <Link href="/find-jobs" className="flex items-center gap-1 hover:text-green-600 transition-all">
             <FiSearch /> Find Jobs
           </Link>
-
-          <Link
-            href="/applied"
-            className="hover:text-green-600 transition-all"
-          >
+          <Link href="/applied" className="hover:text-green-600 transition-all">
             Applied Jobs
           </Link>
-
-          <Link
-            href="/notifications"
-            className="flex items-center gap-1 hover:text-green-600 transition-all"
-          >
+          <Link href="/notifications" className="flex items-center gap-1 hover:text-green-600 transition-all">
             <FiBell /> Notifications
           </Link>
-
-          <Link
-            href="/signin"
-            className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-all shadow-md text-sm"
-          >
+          <Link href="/signin" className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-all shadow-md text-sm">
             Sign In
           </Link>
         </div>
@@ -98,30 +73,26 @@ export default function HomePage() {
           {mobileMenu ? <FiX /> : <FiMenu />}
         </button>
 
-        {/* Mobile Dropdown */}
+        {/* Mobile Dropdown Menu */}
         {mobileMenu && isMobile && (
           <div className="absolute top-full left-0 w-full bg-white shadow-xl border-t z-50 md:hidden">
-            <div className="p-5 space-y-4 text-gray-700 font-medium">
-              <Link href="/dashboard" onClick={() => setMobileMenu(false)} className="block">
+            <div className="flex flex-col p-5 space-y-3 text-gray-700 font-medium">
+              <Link href="/dashboard" onClick={() => setMobileMenu(false)} className="block py-2 px-4 hover:bg-green-50 rounded">
                 Dashboard
               </Link>
-              <Link href="/upload-cv" onClick={() => setMobileMenu(false)} className="block">
+              <Link href="/upload-cv" onClick={() => setMobileMenu(false)} className="block py-2 px-4 hover:bg-green-50 rounded">
                 Upload CV
               </Link>
-              <Link href="/find-jobs" onClick={() => setMobileMenu(false)} className="block">
+              <Link href="/find-jobs" onClick={() => setMobileMenu(false)} className="block py-2 px-4 hover:bg-green-50 rounded">
                 Find Jobs
               </Link>
-              <Link href="/applied" onClick={() => setMobileMenu(false)} className="block">
+              <Link href="/applied" onClick={() => setMobileMenu(false)} className="block py-2 px-4 hover:bg-green-50 rounded">
                 Applied Jobs
               </Link>
-              <Link href="/notifications" onClick={() => setMobileMenu(false)} className="block">
+              <Link href="/notifications" onClick={() => setMobileMenu(false)} className="block py-2 px-4 hover:bg-green-50 rounded">
                 Notifications
               </Link>
-              <Link
-                href="/signin"
-                onClick={() => setMobileMenu(false)}
-                className="block text-green-600 font-semibold"
-              >
+              <Link href="/signin" onClick={() => setMobileMenu(false)} className="block py-2 px-4 hover:bg-green-50 rounded text-green-600 font-semibold">
                 Sign In
               </Link>
             </div>
