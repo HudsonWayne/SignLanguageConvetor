@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import Link from "next/link";
 import {
   FiUpload,
   FiSearch,
@@ -24,23 +24,23 @@ export default function Navbar() {
 
       {/* DESKTOP MENU */}
       <div className="hidden md:flex items-center gap-8 text-sm text-gray-700">
-        <Link to="/dashboard" className="flex items-center gap-1 hover:text-green-600">
+        <Link href="/dashboard" className="flex items-center gap-1 hover:text-green-600">
           <FiUser /> Dashboard
         </Link>
-        <Link to="/upload-cv" className="flex items-center gap-1 hover:text-green-600">
+        <Link href="/upload-cv" className="flex items-center gap-1 hover:text-green-600">
           <FiUpload /> Upload CV
         </Link>
-        <Link to="/find-jobs" className="flex items-center gap-1 hover:text-green-600">
+        <Link href="/find-jobs" className="flex items-center gap-1 hover:text-green-600">
           <FiSearch /> Find Jobs
         </Link>
-        <Link to="/applied" className="hover:text-green-600">
+        <Link href="/applied" className="hover:text-green-600">
           Applied Jobs
         </Link>
-        <Link to="/notifications" className="flex items-center gap-1 hover:text-green-600">
+        <Link href="/notifications" className="flex items-center gap-1 hover:text-green-600">
           <FiBell /> Notifications
         </Link>
         <Link
-          to="/signin"
+          href="/signin"
           className="bg-green-500 text-white px-4 py-2 rounded-md flex items-center gap-1 hover:bg-green-600"
         >
           Sign In
@@ -60,42 +60,42 @@ export default function Navbar() {
         <div className="absolute top-full left-0 w-full bg-white shadow-xl border-t z-50 md:hidden">
           <div className="flex flex-col p-5 space-y-3 text-gray-700 font-medium">
             <Link
-              to="/dashboard"
+              href="/dashboard"
               className="block py-2 px-4 hover:bg-green-50 rounded"
               onClick={() => setMobileMenu(false)}
             >
               Dashboard
             </Link>
             <Link
-              to="/upload-cv"
+              href="/upload-cv"
               className="block py-2 px-4 hover:bg-green-50 rounded"
               onClick={() => setMobileMenu(false)}
             >
               Upload CV
             </Link>
             <Link
-              to="/find-jobs"
+              href="/find-jobs"
               className="block py-2 px-4 hover:bg-green-50 rounded"
               onClick={() => setMobileMenu(false)}
             >
               Find Jobs
             </Link>
             <Link
-              to="/applied"
+              href="/applied"
               className="block py-2 px-4 hover:bg-green-50 rounded"
               onClick={() => setMobileMenu(false)}
             >
               Applied Jobs
             </Link>
             <Link
-              to="/notifications"
+              href="/notifications"
               className="block py-2 px-4 hover:bg-green-50 rounded"
               onClick={() => setMobileMenu(false)}
             >
               Notifications
             </Link>
             <Link
-              to="/signin"
+              href="/signin"
               className="block py-2 px-4 bg-green-500 text-white rounded-md text-center hover:bg-green-600"
               onClick={() => setMobileMenu(false)}
             >
