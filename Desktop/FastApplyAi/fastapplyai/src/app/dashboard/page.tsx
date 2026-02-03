@@ -11,9 +11,21 @@ import {
   FiLogOut,
 } from "react-icons/fi";
 
+interface Job {
+  title: string;
+  company: string;
+  location?: string;
+  link?: string;
+  source?: string;
+  skills?: string[];
+  match?: number;
+  status?: "Applied" | "Viewed" | "Pending";
+}
+
 export default function DashboardPage() {
   const [user, setUser] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [jobs, setJobs] = useState<Job[]>([]);
 
   useEffect(() => {
     // Get email from localStorage (set during login)
@@ -29,6 +41,38 @@ export default function DashboardPage() {
     const handleResize = () => setIsMobile(window.innerWidth < 640);
     handleResize();
     window.addEventListener("resize", handleResize);
+
+    const fetchApplied = async () => {
+      let apiJobs: Job[] = [];
+      try {
+        const res = await fetch("/api/applied-jobs");
+        if (res.ok) {
+          apiJobs = (await res.json()).map((j: Job) => ({
+            ...j,
+            status: j.status || "Applied",
+          }));
+        }
+      } catch {}
+
+      const stored = localStorage.getItem("appliedJobsData");
+      let localJobs: Job[] = [];
+      if (stored) {
+        try {
+          localJobs = JSON.parse(stored);
+        } catch {}
+      }
+
+      const mergedJobs = [
+        ...apiJobs,
+        ...localJobs.filter(
+          (lj) => !apiJobs.some((aj) => aj.link && aj.link === lj.link)
+        ),
+      ];
+      setJobs(mergedJobs);
+    };
+
+    fetchApplied();
+
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
@@ -36,6 +80,15 @@ export default function DashboardPage() {
     localStorage.clear();
     window.location.href = "/signin";
   };
+
+  const totalApplications = jobs.length;
+  const cvViews = jobs.filter((j) => j.status === "Viewed").length;
+  const pending = jobs.filter((j) => j.status === "Pending").length;
+  const responseRate = totalApplications
+    ? Math.round((cvViews / totalApplications) * 100)
+    : 0;
+  const activeSearches = pending;
+  const recentApplications = jobs.slice(-3).reverse();
 
   return (
     <div
@@ -127,11 +180,19 @@ export default function DashboardPage() {
             {
               title: "Total Applications",
               icon: <FiFileText />,
-              value: "0",
+              value: totalApplications.toString(),
             },
-            { title: "CV Views", icon: <FiUser />, value: "0" },
-            { title: "Response Rate", icon: "📈", value: "0%" },
-            { title: "Active Searches", icon: <FiSearch />, value: "0" },
+            { title: "CV Views", icon: <FiUser />, value: cvViews.toString() },
+            {
+              title: "Response Rate",
+              icon: "📈",
+              value: `${responseRate}%`,
+            },
+            {
+              title: "Active Searches",
+              icon: <FiSearch />,
+              value: activeSearches.toString(),
+            },
           ].map((card, i) => (
             <div
               key={i}
@@ -160,20 +221,55 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          <div className="flex flex-col items-center py-12">
-            <div className="bg-green-50 border border-green-200 rounded-full p-5 text-green-500 mb-4 shadow-inner">
-              <FiFileText className="text-4xl" />
+          {recentApplications.length === 0 ? (
+            <div className="flex flex-col items-center py-12">
+              <div className="bg-green-50 border border-green-200 rounded-full p-5 text-green-500 mb-4 shadow-inner">
+                <FiFileText className="text-4xl" />
+              </div>
+              <p className="text-gray-600 mb-6 text-base">
+                No applications yet
+              </p>
+              <Link
+                href="/find-jobs"
+                className="bg-green-500 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-green-600 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
+              >
+                Find Jobs
+              </Link>
             </div>
-            <p className="text-gray-600 mb-6 text-base">
-              No applications yet
-            </p>
-            <Link
-              href="/find-jobs"
-              className="bg-green-500 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-green-600 transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5"
-            >
-              Find Jobs
-            </Link>
-          </div>
+          ) : (
+            <div className="space-y-4">
+              {recentApplications.map((job, index) => (
+                <div
+                  key={job.link ?? index}
+                  className="flex items-center justify-between border-b last:border-b-0 pb-4"
+                >
+                  <div className="text-left">
+                    <p className="font-semibold text-gray-800">
+                      {job.title}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {job.company}
+                    </p>
+                    {job.location && (
+                      <p className="text-xs text-gray-400">
+                        {job.location}
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700">
+                      {job.status || "Applied"}
+                    </span>
+                    {typeof job.match === "number" && (
+                      <p className="mt-1 text-xs text-gray-500">
+                        {job.match}% match
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </main>
     </div>
