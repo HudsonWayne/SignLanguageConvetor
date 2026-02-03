@@ -84,10 +84,12 @@ export async function POST(req: Request) {
   let jobs = await fetchZimbaJobs();
 
   /* COUNTRY FILTER (SOFT) */
-  if (country) {
-    jobs = jobs.filter(j =>
-      j.location.toLowerCase().includes(country) ||
-      country.includes("zim")
+  // Only apply a hard country filter when the country looks like Zimbabwe,
+  // otherwise keep all jobs so the frontend can apply its own filters.
+  if (country && (country.includes("zim") || country.includes("zimbabwe"))) {
+    jobs = jobs.filter((j) =>
+      j.location.toLowerCase().includes("zim") ||
+      j.location.toLowerCase().includes("zimbabwe")
     );
   }
 

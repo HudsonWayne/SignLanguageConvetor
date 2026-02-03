@@ -2,18 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import {
-  FiFileText,
-  FiEye,
-  FiTrendingUp,
-  FiLogOut,
-  FiUpload,
-  FiSearch,
-  FiBell,
-  FiUser,
-  FiMenu,
-  FiX,
-} from "react-icons/fi";
+import { FiFileText, FiEye, FiTrendingUp } from "react-icons/fi";
+import Navbar from "../../components/Navbar";
 
 /* ===================== TYPES ===================== */
 interface Job {
@@ -30,24 +20,14 @@ interface Job {
 /* ===================== PAGE ===================== */
 export default function AppliedJobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [user, setUser] = useState("User");
   const [isMobile, setIsMobile] = useState(false);
-  const [mobileMenu, setMobileMenu] = useState(false);
   const [filter, setFilter] = useState<"all" | "viewed" | "pending">("all");
 
   /* ===================== INIT ===================== */
   useEffect(() => {
-    // User
-    const email = localStorage.getItem("email");
-    if (email) setUser(email.split("@")[0]);
-
     // Screen
     const handleResize = () => {
-      const isSmall = window.innerWidth < 640;
-      setIsMobile(isSmall);
-      if (window.innerWidth >= 768) {
-        setMobileMenu(false);
-      }
+      setIsMobile(window.innerWidth < 640);
     };
     handleResize();
     window.addEventListener("resize", handleResize);
@@ -83,12 +63,6 @@ export default function AppliedJobsPage() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  /* ===================== LOGOUT ===================== */
-  const handleLogout = () => {
-    localStorage.clear();
-    window.location.href = "/signin";
-  };
-
   /* ===================== STATS ===================== */
   const total = jobs.length;
   const viewed = jobs.filter((j) => j.status === "Viewed").length;
@@ -115,125 +89,7 @@ export default function AppliedJobsPage() {
         isMobile ? "" : "animate-gradientFlow"
       }`}
     >
-      {/* NAVBAR */}
-      <nav className="relative flex items-center justify-between px-4 sm:px-6 md:px-10 lg:px-20 xl:px-24 2xl:px-40 py-4 shadow-md bg-white sticky top-0 z-50 backdrop-blur-md bg-opacity-90 w-full max-w-[1920px] mx-auto border-b">
-        {/* Logo */}
-        <div className="flex items-center gap-2 text-lg sm:text-xl font-bold">
-          <div className="bg-green-500 text-white rounded-md px-2 py-1 shadow-sm">
-            QA
-          </div>
-          <span className="tracking-wide whitespace-nowrap">QuickApplyAI</span>
-        </div>
-
-        {/* Desktop Menu */}
-        <div className="hidden md:flex items-center gap-4 lg:gap-8 text-sm text-gray-700 font-medium">
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-1 hover:text-green-600 transition-all"
-          >
-            <FiUser /> Dashboard
-          </Link>
-
-          <Link
-            href="/upload-cv"
-            className="flex items-center gap-1 hover:text-green-600 transition-all"
-          >
-            <FiUpload /> Upload CV
-          </Link>
-
-          <Link
-            href="/find-jobs"
-            className="flex items-center gap-1 hover:text-green-600 transition-all"
-          >
-            <FiSearch /> Find Jobs
-          </Link>
-
-          <Link
-            href="/applied"
-            className="flex items-center gap-1 bg-green-500 text-white px-3 py-2 rounded-md hover:bg-green-600 transition-all shadow-sm"
-          >
-            <FiFileText /> Applied Jobs
-          </Link>
-
-          <Link
-            href="/notifications"
-            className="flex items-center gap-1 hover:text-green-600 transition-all"
-          >
-            <FiBell /> Notifications
-          </Link>
-
-          <span className="text-gray-600">
-            Welcome, <b>{user}</b>
-          </span>
-
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1 bg-gray-100 px-3 py-1.5 rounded-md hover:bg-gray-200 transition-all"
-          >
-            <FiLogOut /> Logout
-          </button>
-        </div>
-
-        {/* Mobile Hamburger */}
-        <button
-          className="md:hidden text-2xl text-gray-700"
-          onClick={() => setMobileMenu(!mobileMenu)}
-        >
-          {mobileMenu ? <FiX /> : <FiMenu />}
-        </button>
-
-        {/* Mobile Dropdown */}
-        {mobileMenu && isMobile && (
-          <div className="absolute top-full left-0 w-full bg-white shadow-xl border-t z-50 md:hidden">
-            <div className="p-5 space-y-4 text-gray-700 font-medium">
-              <Link
-                href="/dashboard"
-                onClick={() => setMobileMenu(false)}
-                className="block"
-              >
-                Dashboard
-              </Link>
-              <Link
-                href="/upload-cv"
-                onClick={() => setMobileMenu(false)}
-                className="block"
-              >
-                Upload CV
-              </Link>
-              <Link
-                href="/find-jobs"
-                onClick={() => setMobileMenu(false)}
-                className="block"
-              >
-                Find Jobs
-              </Link>
-              <Link
-                href="/applied"
-                onClick={() => setMobileMenu(false)}
-                className="block text-green-600 font-semibold"
-              >
-                Applied Jobs
-              </Link>
-              <Link
-                href="/notifications"
-                onClick={() => setMobileMenu(false)}
-                className="block"
-              >
-                Notifications
-              </Link>
-              <button
-                onClick={() => {
-                  setMobileMenu(false);
-                  handleLogout();
-                }}
-                className="block w-full text-left text-red-600 font-semibold"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        )}
-      </nav>
+      <Navbar />
 
       {/* HEADER */}
       <header className="text-center py-16">
