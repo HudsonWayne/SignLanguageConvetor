@@ -87,14 +87,15 @@ export async function POST(req: Request) {
   // Only apply a hard country filter when the country looks like Zimbabwe,
   // otherwise keep all jobs so the frontend can apply its own filters.
   if (country && (country.includes("zim") || country.includes("zimbabwe"))) {
-    jobs = jobs.filter((j) =>
-      j.location.toLowerCase().includes("zim") ||
-      j.location.toLowerCase().includes("zimbabwe")
+    jobs = jobs.filter(
+      (j) =>
+        j.location.toLowerCase().includes("zim") ||
+        j.location.toLowerCase().includes("zimbabwe")
     );
   }
 
   /* MATCH SCORE */
-  jobs = jobs.map(j => {
+  jobs = jobs.map((j) => {
     let score = 20; // base score
 
     const text = `${j.title} ${j.description}`.toLowerCase();
@@ -113,4 +114,3 @@ export async function POST(req: Request) {
 
   return NextResponse.json(jobs.slice(0, 50));
 }
-
