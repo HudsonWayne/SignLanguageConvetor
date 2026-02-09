@@ -118,6 +118,15 @@ export default function FindJobsPage() {
     }
   };
 
+  const openLinkedInSearch = () => {
+    const query = skills.length ? skills.join(" ") : "jobs";
+    const location = city || country || "Zimbabwe";
+    const url = `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(
+      query
+    )}&location=${encodeURIComponent(location)}`;
+    window.open(url, "_blank");
+  };
+
   if (!mounted) return <div className="min-h-screen bg-slate-100" />;
 
   return (
@@ -252,12 +261,20 @@ export default function FindJobsPage() {
           </div>
 
           <div className="flex items-end">
-            <button
-              onClick={fetchJobs}
-              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white p-3 sm:p-4 rounded-2xl font-bold shadow-lg hover:scale-[1.02] transition-transform"
-            >
-              Search Jobs
-            </button>
+            <div className="w-full flex flex-col gap-3">
+              <button
+                onClick={fetchJobs}
+                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white p-3 sm:p-4 rounded-2xl font-bold shadow-lg hover:scale-[1.02] transition-transform"
+              >
+                Search Jobs
+              </button>
+              <button
+                onClick={openLinkedInSearch}
+                className="w-full bg-[#0A66C2] text-white p-3 sm:p-4 rounded-2xl font-bold shadow-lg hover:brightness-110 transition"
+              >
+                Search on LinkedIn
+              </button>
+            </div>
           </div>
         </div>
 
