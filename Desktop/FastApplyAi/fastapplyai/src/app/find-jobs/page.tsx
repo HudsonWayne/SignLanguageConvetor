@@ -28,6 +28,8 @@ export default function FindJobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
   const [country, setCountry] = useState("");
+  const [city, setCity] = useState("");
+  const [remoteOnly, setRemoteOnly] = useState(false);
   const [skills, setSkills] = useState<string[]>([]);
   const [skillInput, setSkillInput] = useState("");
   const [mobileMenu, setMobileMenu] = useState(false);
@@ -79,10 +81,15 @@ export default function FindJobsPage() {
       const res = await fetch("/api/search-jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ country, keywords: skills }),
+        body: JSON.stringify({
+          country,
+          city,
+          remoteOnly: filter === "remote" || remoteOnly,
+          keywords: skills,
+        }),
       });
       const data = await res.json();
-      setJobs(data);
+      setJobs(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error("fetchJobs error", e);
       setJobs([]);
@@ -93,9 +100,12 @@ export default function FindJobsPage() {
   useEffect(() => { if (mounted) fetchJobs(); }, [mounted]);
 
   const filteredJobs = jobs.filter((job) => {
-    const loc = job.location.toLowerCase();
-    if (filter === "local") return loc.includes(country.toLowerCase()) || loc.includes("zimbabwe");
-    if (filter === "remote") return job.remote || loc.includes("remote");
+    const loc = (job.location || "").toLowerCase();
+    if (filter === "local") {
+      if (!country.trim()) return true;
+      return loc.includes(country.toLowerCase()) || loc.includes("zimbabwe");
+    }
+    if (filter === "remote") return Boolean(job.remote) || loc.includes("remote");
     return true;
   });
 
@@ -166,9 +176,11 @@ export default function FindJobsPage() {
 
       {/* FILTERS */}
       <section className="px-4 sm:px-6 lg:px-20 mb-10">
-        <div className="max-w-5xl mx-auto bg-white/80 backdrop-blur-xl p-6 sm:p-8 rounded-3xl shadow-xl grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+        <div className="max-w-5xl mx-auto bg-white/80 backdrop-blur-xl p-6 sm:p-8 rounded-3xl shadow-xl grid grid-cols-1 sm:grid-cols-4 gap-4 sm:gap-6">
           <div>
-            <label className="text-gray-700 flex items-center gap-2 mb-2 font-semibold"><FiMapPin /> Country</label>
+            <label className="text-gray-700 flex items-center gap-2 mb-2 font-semibold">
+              <FiMapPin /> Country
+            </label>
             <input
               value={country}
               onChange={(e) => setCountry(e.target.value)}
@@ -177,17 +189,75 @@ export default function FindJobsPage() {
             />
           </div>
 
+          <div>
+            <label className="text-gray-700 flex items-center gap-2 mb-2 font-semibold">
+              City (Zimbabwe)
+            </label>
+            <select
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              className="p-3 sm:p-4 border rounded-2xl w-full focus:ring-2 focus:ring-green-400 focus:outline-none bg-white"
+            >
+              <option value="">All Cities</option>
+              <option value="Harare">Harare</option>
+              <option value="Bulawayo">Bulawayo</option>
+              <option value="Mutare">Mutare</option>
+              <option value="Gweru">Gweru</option>
+              <option value="Kwekwe">Kwekwe</option>
+              <option value="Masvingo">Masvingo</option>
+              <option value="Chinhoyi">Chinhoyi</option>
+              <option value="Kadoma">Kadoma</option>
+              <option value="Bindura">Bindura</option>
+              <option value="Victoria Falls">Victoria Falls</option>
+            </select>
+          </div>
+
           <div className="flex flex-col gap-2">
             <span className="font-semibold text-gray-700">Filter Jobs</span>
             <div className="flex flex-wrap gap-2">
-              <button onClick={() => setFilter("all")} className={`px-3 py-2 sm:px-4 sm:py-2 rounded-xl ${filter==="all"?"bg-green-600 text-white":"bg-gray-200"}`}>All</button>
-              <button onClick={() => setFilter("local")} className={`px-3 py-2 sm:px-4 sm:py-2 rounded-xl ${filter==="local"?"bg-green-600 text-white":"bg-gray-200"}`}>Local</button>
-              <button onClick={() => setFilter("remote")} className={`px-3 py-2 sm:px-4 sm:py-2 rounded-xl ${filter==="remote"?"bg-green-600 text-white":"bg-gray-200"}`}>Remote</button>
+              <button
+                onClick={() => setFilter("all")}
+                className={`px-3 py-2 sm:px-4 sm:py-2 rounded-xl ${
+                  filter === "all" ? "bg-green-600 text-white" : "bg-gray-200"
+                }`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setFilter("local")}
+                className={`px-3 py-2 sm:px-4 sm:py-2 rounded-xl ${
+                  filter === "local" ? "bg-green-600 text-white" : "bg-gray-200"
+                }`}
+              >
+                Local
+              </button>
+              <button
+                onClick={() => setFilter("remote")}
+                className={`px-3 py-2 sm:px-4 sm:py-2 rounded-xl ${
+                  filter === "remote" ? "bg-green-600 text-white" : "bg-gray-200"
+                }`}
+              >
+                Remote
+              </button>
             </div>
+
+            <label className="flex items-center gap-2 text-sm text-gray-700 select-none">
+              <input
+                type="checkbox"
+                checked={remoteOnly}
+                onChange={(e) => setRemoteOnly(e.target.checked)}
+              />
+              Remote only
+            </label>
           </div>
 
           <div className="flex items-end">
-            <button onClick={fetchJobs} className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white p-3 sm:p-4 rounded-2xl font-bold shadow-lg hover:scale-[1.02] transition-transform">Apply Filters</button>
+            <button
+              onClick={fetchJobs}
+              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white p-3 sm:p-4 rounded-2xl font-bold shadow-lg hover:scale-[1.02] transition-transform"
+            >
+              Search Jobs
+            </button>
           </div>
         </div>
 
