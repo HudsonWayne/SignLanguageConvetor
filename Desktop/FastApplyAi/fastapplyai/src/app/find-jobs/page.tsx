@@ -22,6 +22,7 @@ interface Job {
   remote?: boolean;
   skills?: string[];
   match?: number;
+  postedAt?: string;
 }
 
 export default function FindJobsPage() {
@@ -36,6 +37,7 @@ export default function FindJobsPage() {
   const [mounted, setMounted] = useState(false);
   const [filter, setFilter] = useState<"all" | "local" | "remote">("all");
   const [appliedJobs, setAppliedJobs] = useState<string[]>([]);
+  const [recency, setRecency] = useState<"any" | "1" | "7" | "30">("any");
 
   // Applicant info (mock)
   const user = {
@@ -86,6 +88,7 @@ export default function FindJobsPage() {
           city,
           remoteOnly: filter === "remote" || remoteOnly,
           keywords: skills,
+          minPostedDays: recency === "any" ? null : Number(recency),
         }),
       });
       const data = await res.json();
@@ -125,6 +128,29 @@ export default function FindJobsPage() {
       query
     )}&location=${encodeURIComponent(location)}`;
     window.open(url, "_blank");
+  };
+
+  const hoursSince = (iso?: string) => {
+    if (!iso) return null;
+    const t = new Date(iso).getTime();
+    if (Number.isNaN(t)) return null;
+    return (Date.now() - t) / (1000 * 60 * 60);
+  };
+
+  const formatAge = (iso?: string) => {
+    const h = hoursSince(iso);
+    if (h === null) return "";
+    if (h < 24) return `${Math.round(h)}h ago`;
+    const d = h / 24;
+    return `${Math.round(d)}d ago`;
+  };
+
+  const matchedSkillsForJob = (job: Job) => {
+    const text = `${job.title} ${job.description}`.toLowerCase();
+    return skills
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .filter((s) => text.includes(s.toLowerCase()));
   };
 
   if (!mounted) return <div className="min-h-screen bg-slate-100" />;
@@ -258,6 +284,18 @@ export default function FindJobsPage() {
               />
               Remote only
             </label>
+
+            <label className="text-sm text-gray-700 font-medium">Recency</label>
+            <select
+              value={recency}
+              onChange={(e) => setRecency(e.target.value as any)}
+              className="p-3 border rounded-xl w-full focus:ring-2 focus:ring-green-400 focus:outline-none bg-white"
+            >
+              <option value="any">Any time</option>
+              <option value="1">Last 24 hours</option>
+              <option value="7">Last 7 days</option>
+              <option value="30">Last 30 days</option>
+            </select>
           </div>
 
           <div className="flex items-end">
@@ -323,6 +361,19 @@ export default function FindJobsPage() {
                   <p className="text-gray-500 mt-1 text-sm sm:text-base">{job.location}</p>
                   <p className="text-gray-700 mt-3 sm:mt-4 text-sm sm:text-base leading-relaxed">{job.description?.substring(0, 180)}...</p>
                   <p className="text-xs text-gray-400 mt-2">Source: {job.source}</p>
+                  {job.postedAt && (
+                    <p className="text-xs text-gray-400 mt-1">Posted: {formatAge(job.postedAt)}</p>
+                  )}
+
+                  {matchedSkillsForJob(job).length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {matchedSkillsForJob(job).slice(0, 6).map((s) => (
+                        <span key={s} className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {job.skills && job.skills.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-2">
                       {job.skills.map(skill => (

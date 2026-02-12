@@ -14,6 +14,7 @@ interface Job {
   remote?: boolean;
   city?: string;
   country?: string;
+  postedAt?: string;
 }
 
 /* ========================== HELPERS ========================== */
@@ -45,6 +46,20 @@ function normalizeCity(input = "") {
 function inferCityFromText(...parts: Array<string | undefined | null>) {
   const combined = clean(parts.filter(Boolean).join(" "));
   return normalizeCity(combined);
+}
+
+function safeDateIso(input?: string) {
+  if (!input) return undefined;
+  const d = new Date(input);
+  if (Number.isNaN(d.getTime())) return undefined;
+  return d.toISOString();
+}
+
+function hoursSince(iso?: string) {
+  if (!iso) return Number.POSITIVE_INFINITY;
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return Number.POSITIVE_INFINITY;
+  return (Date.now() - t) / (1000 * 60 * 60);
 }
 
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
@@ -184,6 +199,7 @@ async function fetchRemotiveJobs(keywords: string[]): Promise<Job[]> {
       remote: true,
       city: "",
       country: "Remote",
+      postedAt: safeDateIso(j.publication_date),
     };
   });
 }
@@ -245,6 +261,11 @@ export async function POST(req: Request) {
   const city = (body.city || "").toLowerCase();
   const remoteOnly = Boolean(body.remoteOnly);
   const keywords: string[] = body.keywords || [];
+  const minPostedDaysRaw = body.minPostedDays;
+  const minPostedDays =
+    typeof minPostedDaysRaw === "number" && Number.isFinite(minPostedDaysRaw)
+      ? minPostedDaysRaw
+      : null;
 
   const [zimba, remotive, arbeitnow] = await Promise.all([
     withTimeout(fetchZimbaJobs(), 8000).catch(() => [] as Job[]),
@@ -282,6 +303,12 @@ export async function POST(req: Request) {
     );
   }
 
+  /* RECENCY FILTER */
+  if (minPostedDays !== null) {
+    const maxHours = minPostedDays * 24;
+    jobs = jobs.filter((j) => hoursSince(j.postedAt) <= maxHours);
+  }
+
   /* MATCH SCORE */
   jobs = jobs.map((j) => {
     let score = 20; // base score
@@ -289,7 +316,11 @@ export async function POST(req: Request) {
     const text = `${j.title} ${j.description}`.toLowerCase();
 
     keywords.forEach((k) => {
-      if (text.includes(k.toLowerCase())) score += 10;
+      const kk = k.toLowerCase().trim();
+      if (!kk) return;
+      if (text.includes(kk)) score += 12;
+      // extra boost for exact-ish occurrences in title
+      if (j.title.toLowerCase().includes(kk)) score += 8;
     });
 
     if (Boolean(j.remote) || j.location.toLowerCase().includes("remote"))
@@ -303,7 +334,9 @@ export async function POST(req: Request) {
     const aLocal = (a.country || "").toLowerCase().includes("zimbabwe") || a.source === "ZimbaJob";
     const bLocal = (b.country || "").toLowerCase().includes("zimbabwe") || b.source === "ZimbaJob";
     if (aLocal !== bLocal) return aLocal ? -1 : 1;
-    return (b.match || 0) - (a.match || 0);
+    const matchDiff = (b.match || 0) - (a.match || 0);
+    if (matchDiff !== 0) return matchDiff;
+    return hoursSince(a.postedAt) - hoursSince(b.postedAt);
   });
 
   return NextResponse.json(jobs.slice(0, 50));
