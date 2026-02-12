@@ -22,6 +22,7 @@ const clean = (t = "") => t.replace(/\s+/g, " ").trim();
 function normalizeCity(input = "") {
   const c = clean(input).toLowerCase();
   if (!c) return "";
+
   // normalize common Zimbabwe cities
   const map: Record<string, string> = {
     harare: "Harare",
@@ -39,6 +40,11 @@ function normalizeCity(input = "") {
     if (c.includes(key)) return map[key];
   }
   return "";
+}
+
+function inferCityFromText(...parts: Array<string | undefined | null>) {
+  const combined = clean(parts.filter(Boolean).join(" "));
+  return normalizeCity(combined);
 }
 
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
@@ -98,22 +104,33 @@ async function fetchZimbaJobs(): Promise<Job[]> {
 
   const $ = load(html);
 
-  $("a.job-title").each((_, el) => {
-    const title = clean($(el).text());
-    const href = $(el).attr("href");
+  // ZimbaJob markup varies; use multiple selectors and fallbacks.
+  const titleAnchors = $("a.job-title");
+  const anchors = titleAnchors.length ? titleAnchors : $("a[href*='/job-vacancies-zimbabwe/']");
+
+  anchors.each((_, el) => {
+    const $el = $(el);
+    const title = clean($el.text());
+    const href = $el.attr("href");
     if (!title || !href) return;
 
-    const card = $(el).closest(".job-listing");
+    const card = $el.closest(".job-listing");
 
     const company =
-      clean(card.find(".company-name").text()) || "Unknown Company";
+      clean(card.find(".company-name").text()) ||
+      clean(card.find("a[href*='/recruiter/']").first().text()) ||
+      "Unknown Company";
 
-    const location =
-      clean(card.find(".job-location").text()) || "Zimbabwe";
+    const locationText =
+      clean(card.find(".job-location").text()) ||
+      clean(card.text());
 
     const description =
       clean(card.find(".job-description").text()) ||
       "See full description on employer site.";
+
+    const inferredCity = inferCityFromText(title, locationText);
+    const location = inferredCity ? `${inferredCity}, Zimbabwe` : "Zimbabwe";
 
     jobs.push({
       title,
@@ -123,8 +140,9 @@ async function fetchZimbaJobs(): Promise<Job[]> {
       skills: [],
       link: href.startsWith("http") ? href : `${base}${href}`,
       source: "ZimbaJob",
-      remote: location.toLowerCase().includes("remote"),
-      city: normalizeCity(location),
+      remote:
+        title.toLowerCase().includes("remote") || locationText.toLowerCase().includes("remote"),
+      city: inferredCity,
       country: "Zimbabwe",
     });
   });
@@ -251,7 +269,9 @@ export async function POST(req: Request) {
   if (city) {
     const target = normalizeCity(city);
     if (target) {
-      jobs = jobs.filter((j) => (j.city || normalizeCity(j.location)) === target);
+      jobs = jobs.filter(
+        (j) => inferCityFromText(j.city, j.location, j.title) === target
+      );
     }
   }
 
@@ -279,7 +299,12 @@ export async function POST(req: Request) {
     return { ...j, match: score };
   });
 
-  jobs.sort((a, b) => (b.match || 0) - (a.match || 0));
+  jobs.sort((a, b) => {
+    const aLocal = (a.country || "").toLowerCase().includes("zimbabwe") || a.source === "ZimbaJob";
+    const bLocal = (b.country || "").toLowerCase().includes("zimbabwe") || b.source === "ZimbaJob";
+    if (aLocal !== bLocal) return aLocal ? -1 : 1;
+    return (b.match || 0) - (a.match || 0);
+  });
 
   return NextResponse.json(jobs.slice(0, 50));
 }
