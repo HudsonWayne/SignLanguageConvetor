@@ -42,6 +42,7 @@ export default function FindJobsPage() {
   const [minMatch, setMinMatch] = useState(70);
   const [requireAllSkills, setRequireAllSkills] = useState(false);
   const [cvAlignedOnly, setCvAlignedOnly] = useState(true);
+  const [searchNote, setSearchNote] = useState<string>("");
 
   // Applicant info (mock)
   const user = {
@@ -84,23 +85,56 @@ export default function FindJobsPage() {
   const fetchJobs = async () => {
     setLoading(true);
     try {
-      const effectiveMinMatch = cvAlignedOnly ? Math.max(10, minMatch) : minMatch;
-      const res = await fetch("/api/search-jobs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          country,
-          city,
-          remoteOnly: filter === "remote" || remoteOnly,
-          keywords: skills,
-          minPostedDays: recency === "any" ? null : Number(recency),
-          minMatch: skills.length ? effectiveMinMatch : null,
-          requireAllSkills: skills.length ? requireAllSkills : false,
-          failOpen: !cvAlignedOnly,
-        }),
-      });
-      const data = await res.json();
-      setJobs(Array.isArray(data) ? data : []);
+      const doRequest = async (payload: any) => {
+        const res = await fetch("/api/search-jobs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        return Array.isArray(data) ? (data as Job[]) : [];
+      };
+
+      const basePayload = {
+        country,
+        city,
+        remoteOnly: filter === "remote" || remoteOnly,
+        keywords: skills,
+        minPostedDays: recency === "any" ? null : Number(recency),
+        minMatch: skills.length ? (cvAlignedOnly ? Math.max(10, minMatch) : minMatch) : null,
+        requireAllSkills: skills.length ? requireAllSkills : false,
+        failOpen: !cvAlignedOnly,
+      };
+
+      setSearchNote("");
+      let results = await doRequest(basePayload);
+
+      if (cvAlignedOnly && results.length === 0) {
+        // 1) relax city (city pages often have few tech postings)
+        if (city) {
+          results = await doRequest({ ...basePayload, city: "" });
+          if (results.length > 0) setSearchNote("No matches in selected city — showing Zimbabwe-wide matches.");
+        }
+      }
+
+      if (cvAlignedOnly && results.length === 0) {
+        // 2) relax match threshold
+        const currentMin = typeof basePayload.minMatch === "number" ? basePayload.minMatch : null;
+        if (currentMin !== null && currentMin > 30) {
+          results = await doRequest({ ...basePayload, city: "", minMatch: 30 });
+          if (results.length > 0) setSearchNote("No matches at your threshold — lowered Minimum match to 30%.");
+        }
+      }
+
+      if (cvAlignedOnly && results.length === 0) {
+        const currentMin = typeof basePayload.minMatch === "number" ? basePayload.minMatch : null;
+        if (currentMin !== null && currentMin > 10) {
+          results = await doRequest({ ...basePayload, city: "", minMatch: 10 });
+          if (results.length > 0) setSearchNote("Still too strict — lowered Minimum match to 10%.");
+        }
+      }
+
+      setJobs(results);
     } catch (e) {
       console.error("fetchJobs error", e);
       setJobs([]);
@@ -382,6 +416,12 @@ export default function FindJobsPage() {
             ))}
           </div>
         </div>
+
+        {searchNote && (
+          <div className="max-w-5xl mx-auto mt-4 text-sm text-gray-700 bg-white/70 border border-white/60 rounded-2xl px-4 py-3">
+            {searchNote}
+          </div>
+        )}
       </section>
 
       {/* JOB RESULTS */}
