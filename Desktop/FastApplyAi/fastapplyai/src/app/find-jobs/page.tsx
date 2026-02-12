@@ -41,6 +41,7 @@ export default function FindJobsPage() {
   const [recency, setRecency] = useState<"any" | "1" | "7" | "30">("any");
   const [minMatch, setMinMatch] = useState(70);
   const [requireAllSkills, setRequireAllSkills] = useState(false);
+  const [cvAlignedOnly, setCvAlignedOnly] = useState(true);
 
   // Applicant info (mock)
   const user = {
@@ -83,6 +84,7 @@ export default function FindJobsPage() {
   const fetchJobs = async () => {
     setLoading(true);
     try {
+      const effectiveMinMatch = cvAlignedOnly ? Math.max(10, minMatch) : minMatch;
       const res = await fetch("/api/search-jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -92,8 +94,9 @@ export default function FindJobsPage() {
           remoteOnly: filter === "remote" || remoteOnly,
           keywords: skills,
           minPostedDays: recency === "any" ? null : Number(recency),
-          minMatch: skills.length ? minMatch : null,
+          minMatch: skills.length ? effectiveMinMatch : null,
           requireAllSkills: skills.length ? requireAllSkills : false,
+          failOpen: !cvAlignedOnly,
         }),
       });
       const data = await res.json();
@@ -109,6 +112,7 @@ export default function FindJobsPage() {
 
   const filteredJobs = jobs.filter((job) => {
     const loc = (job.location || "").toLowerCase();
+    if (cvAlignedOnly && (job.match || 0) < Math.max(10, minMatch)) return false;
     if (filter === "local") {
       if (!country.trim()) return true;
       return loc.includes(country.toLowerCase()) || loc.includes("zimbabwe");
@@ -318,6 +322,19 @@ export default function FindJobsPage() {
             <label className="flex items-center gap-2 text-sm text-gray-700 select-none">
               <input
                 type="checkbox"
+                checked={cvAlignedOnly}
+                onChange={(e) => setCvAlignedOnly(e.target.checked)}
+              />
+              CV-aligned only (recommended)
+            </label>
+
+            <p className="text-xs text-gray-500">
+              If enabled, we hide low-match jobs and only show roles that mention your CV skills.
+            </p>
+
+            <label className="flex items-center gap-2 text-sm text-gray-700 select-none">
+              <input
+                type="checkbox"
                 checked={requireAllSkills}
                 onChange={(e) => setRequireAllSkills(e.target.checked)}
               />
@@ -374,7 +391,9 @@ export default function FindJobsPage() {
         ) : filteredJobs.length===0 ? (
           <div className="text-center text-gray-700">
             <p className="text-lg sm:text-xl font-semibold">No jobs found for these filters.</p>
-            <p className="text-sm sm:text-base text-gray-500 mt-2">Tip: adjust country, filter, or add skills.</p>
+            <p className="text-sm sm:text-base text-gray-500 mt-2">
+              Tip: add fewer core skills (8-12), lower Minimum match to 10-30%, or disable CV-aligned only.
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-7xl mx-auto">
