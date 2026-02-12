@@ -145,6 +145,217 @@ function getSkillHits(job: Job, keywords: string[]) {
   return out;
 }
 
+function inferRoleIntentFromSkills(keywords: string[]) {
+  const keys = uniqueNormalizedSkills(keywords);
+  const text = keys.join(" ");
+
+  const softwareSignals = [
+    "javascript",
+    "typescript",
+    "react",
+    "next",
+    "node",
+    "express",
+    "python",
+    "django",
+    "flask",
+    "java",
+    "spring",
+    "c#",
+    "dotnet",
+    "php",
+    "laravel",
+    "sql",
+    "postgres",
+    "mysql",
+    "mongodb",
+    "api",
+    "frontend",
+    "backend",
+    "fullstack",
+    "devops",
+    "aws",
+    "azure",
+    "gcp",
+    "docker",
+    "kubernetes",
+  ];
+
+  let softwareHits = 0;
+  for (const s of softwareSignals) {
+    if (text.includes(s)) softwareHits += 1;
+  }
+
+  // If the CV skills are clearly software/web oriented, we'll avoid unrelated roles.
+  return {
+    likelySoftware: softwareHits >= 3,
+  };
+}
+
+function isLikelySoftwareJob(job: Job) {
+  const text = `${job.title} ${job.description} ${(job.skills || []).join(" ")}`.toLowerCase();
+  const allow = [
+    "developer",
+    "engineer",
+    "software",
+    "web",
+    "frontend",
+    "front-end",
+    "backend",
+    "back-end",
+    "fullstack",
+    "full-stack",
+    "data",
+    "analyst",
+    "scientist",
+    "it ",
+    "ict",
+    "systems",
+    "network",
+    "cyber",
+    "security",
+    "devops",
+    "qa",
+    "tester",
+    "product",
+    "ui",
+    "ux",
+    "designer",
+  ];
+  for (const w of allow) {
+    if (text.includes(w)) return true;
+  }
+
+  // common unrelated roles we want to exclude when user is a software candidate
+  const block = [
+    "customer service",
+    "sales",
+    "marketing",
+    "warehouse",
+    "logistics",
+    "clerk",
+    "administrator",
+    "admin",
+    "driver",
+    "teacher",
+    "farm",
+    "piggery",
+    "health and safety",
+    "safety officer",
+    "finance manager",
+    "accountant",
+    "operations manager",
+    "talent acquisition",
+    "recruiter",
+  ];
+  for (const w of block) {
+    if (text.includes(w)) return false;
+  }
+
+  // if unclear, don't exclude
+  return true;
+}
+
+async function fetchZimbaJobDetails(url: string) {
+  const html = await safeFetch(url);
+  if (!html) return { description: "", company: "" };
+  const $ = load(html);
+  const description =
+    clean($(".job-desc").text()) ||
+    clean($(".job-description").text()) ||
+    clean($("#job-description").text()) ||
+    clean($("article").text());
+  const company =
+    clean($(".company-name").first().text()) ||
+    clean($("a[href*='/recruiter/']").first().text());
+  return { description, company };
+}
+
+async function fetchIHarareJobDetails(url: string) {
+  const html = await safeFetch(url);
+  if (!html) return { description: "", company: "", location: "", postedAt: undefined as string | undefined };
+  const $ = load(html);
+
+  const description =
+    clean($(".job-description").text()) ||
+    clean($(".entry-content").text()) ||
+    clean($("article").text());
+
+  const company =
+    clean($(".company-name").first().text()) ||
+    clean($(".job-company").first().text());
+
+  const location =
+    clean($(".job-location").first().text()) ||
+    clean($(".location").first().text());
+
+  // iHarare often has dates like "Expires: Feb. 12, 2026"; treat it as a proxy for recency ordering
+  const expiresText = clean($("*:contains('Expires:')").first().text());
+  const expiresMatch = expiresText.match(/Expires:\s*(.+)$/i);
+  const postedAt = expiresMatch ? safeDateIso(expiresMatch[1]) : undefined;
+
+  return { description, company, location, postedAt };
+}
+
+async function fetchIHarareJobs(): Promise<Job[]> {
+  const jobs: Job[] = [];
+  const base = "https://ihararejobs.com";
+
+  const html = await safeFetch(base + "/");
+  if (!html) return jobs;
+
+  const $ = load(html);
+  const links = new Set<string>();
+
+  // Recent Job Offers list contains /job/ links
+  $("a[href*='/job/']").each((_, el) => {
+    const href = $(el).attr("href");
+    if (!href) return;
+    const abs = href.startsWith("http") ? href : `${base}${href}`;
+    if (!abs.includes("/job/")) return;
+    links.add(abs);
+  });
+
+  const urlList = Array.from(links).slice(0, 25);
+  const details = await Promise.all(
+    urlList.map((u) => withTimeout(fetchIHarareJobDetails(u), 6000).catch(() => null))
+  );
+
+  for (let i = 0; i < urlList.length; i++) {
+    const url = urlList[i];
+    const d = details[i];
+    if (!d) continue;
+
+    // Try to infer title from URL slug if not easily parseable from the page text
+    let title = "";
+    try {
+      const slug = new URL(url).pathname.split("/").filter(Boolean).pop() || "";
+      title = clean(slug.replace(/-\d+\/?$/, "").replace(/-/g, " "));
+    } catch {
+      title = "";
+    }
+
+    const inferredCity = inferCityFromText(d.location, title, d.description);
+    const location = clean(d.location) || (inferredCity ? `${inferredCity}, Zimbabwe` : "Zimbabwe");
+
+    jobs.push({
+      title: title || "Job Opportunity",
+      company: d.company || "Unknown Company",
+      location,
+      description: d.description || "",
+      skills: [],
+      link: url,
+      source: "IHarareJobs",
+      remote: /remote/i.test(d.description) || /remote/i.test(location),
+      city: inferredCity,
+      country: "Zimbabwe",
+      postedAt: d.postedAt,
+    });
+  }
+
+  return jobs;
+}
+
 /* ====================== ZIMBAJOB ====================== */
 async function fetchZimbaJobs(): Promise<Job[]> {
   const jobs: Job[] = [];
@@ -315,13 +526,33 @@ export async function POST(req: Request) {
   const requireAllSkills = Boolean(body.requireAllSkills);
   const failOpen = body.failOpen !== false;
 
-  const [zimba, remotive, arbeitnow] = await Promise.all([
+  const [zimba, iharare, remotive, arbeitnow] = await Promise.all([
     withTimeout(fetchZimbaJobs(), 8000).catch(() => [] as Job[]),
+    withTimeout(fetchIHarareJobs(), 8000).catch(() => [] as Job[]),
     withTimeout(fetchRemotiveJobs(effectiveKeywords), 8000).catch(() => [] as Job[]),
     withTimeout(fetchArbeitnowJobs(effectiveKeywords), 8000).catch(() => [] as Job[]),
   ]);
 
-  let jobs = dedupeJobs([...zimba, ...remotive, ...arbeitnow]);
+  let jobs = dedupeJobs([...zimba, ...iharare, ...remotive, ...arbeitnow]);
+
+  // Enrich ZimbaJob items by fetching detail pages so skill matching has real text.
+  // Limit to a small number to avoid slow responses.
+  const zimbaToEnrich = jobs.filter((j) => j.source === "ZimbaJob").slice(0, 12);
+  await Promise.all(
+    zimbaToEnrich.map(async (j) => {
+      if (j.description && !j.description.toLowerCase().includes("see full description")) return;
+      const details = await withTimeout(fetchZimbaJobDetails(j.link), 5000).catch(() => null);
+      if (!details) return;
+      if (details.description) j.description = details.description;
+      if (details.company) j.company = details.company;
+    })
+  );
+
+  /* ROLE INTENT FILTER (AI-like) */
+  const intent = inferRoleIntentFromSkills(effectiveKeywords);
+  if (intent.likelySoftware) {
+    jobs = jobs.filter((j) => isLikelySoftwareJob(j));
+  }
 
   /* COUNTRY FILTER (SOFT) */
   // Only apply a hard country filter when the country looks like Zimbabwe,
