@@ -23,6 +23,7 @@ interface Job {
   skills?: string[];
   match?: number;
   postedAt?: string;
+  matchedSkills?: string[];
 }
 
 export default function FindJobsPage() {
@@ -38,6 +39,8 @@ export default function FindJobsPage() {
   const [filter, setFilter] = useState<"all" | "local" | "remote">("all");
   const [appliedJobs, setAppliedJobs] = useState<string[]>([]);
   const [recency, setRecency] = useState<"any" | "1" | "7" | "30">("any");
+  const [minMatch, setMinMatch] = useState(70);
+  const [requireAllSkills, setRequireAllSkills] = useState(false);
 
   // Applicant info (mock)
   const user = {
@@ -89,6 +92,8 @@ export default function FindJobsPage() {
           remoteOnly: filter === "remote" || remoteOnly,
           keywords: skills,
           minPostedDays: recency === "any" ? null : Number(recency),
+          minMatch: skills.length ? minMatch : null,
+          requireAllSkills: skills.length ? requireAllSkills : false,
         }),
       });
       const data = await res.json();
@@ -146,6 +151,9 @@ export default function FindJobsPage() {
   };
 
   const matchedSkillsForJob = (job: Job) => {
+    if (Array.isArray(job.matchedSkills) && job.matchedSkills.length > 0) {
+      return job.matchedSkills;
+    }
     const text = `${job.title} ${job.description}`.toLowerCase();
     return skills
       .map((s) => s.trim())
@@ -296,6 +304,25 @@ export default function FindJobsPage() {
               <option value="7">Last 7 days</option>
               <option value="30">Last 30 days</option>
             </select>
+
+            <label className="text-sm text-gray-700 font-medium">Minimum match: {minMatch}%</label>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={minMatch}
+              onChange={(e) => setMinMatch(Number(e.target.value))}
+              className="w-full"
+            />
+
+            <label className="flex items-center gap-2 text-sm text-gray-700 select-none">
+              <input
+                type="checkbox"
+                checked={requireAllSkills}
+                onChange={(e) => setRequireAllSkills(e.target.checked)}
+              />
+              Require all my skills
+            </label>
           </div>
 
           <div className="flex items-end">

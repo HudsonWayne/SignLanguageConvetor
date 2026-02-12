@@ -15,6 +15,7 @@ interface Job {
   city?: string;
   country?: string;
   postedAt?: string;
+  matchedSkills?: string[];
 }
 
 /* ========================== HELPERS ========================== */
@@ -105,6 +106,43 @@ async function safeFetchJson<T>(url: string): Promise<T | null> {
   } catch {
     return null;
   }
+}
+
+function normalizeSkill(s: string) {
+  return clean(s).toLowerCase();
+}
+
+function uniqueNormalizedSkills(keywords: string[]) {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of keywords || []) {
+    const k = normalizeSkill(raw);
+    if (!k) continue;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(k);
+  }
+  return out;
+}
+
+function getSkillHits(job: Job, keywords: string[]) {
+  const text = `${job.title} ${job.description} ${(job.skills || []).join(" ")}`.toLowerCase();
+  const hits: string[] = [];
+  for (const raw of keywords) {
+    const k = normalizeSkill(raw);
+    if (!k) continue;
+    if (text.includes(k)) hits.push(raw);
+  }
+  // de-dupe case-insensitively while keeping original label
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const h of hits) {
+    const key = normalizeSkill(h);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(h);
+  }
+  return out;
 }
 
 /* ====================== ZIMBAJOB ====================== */
@@ -260,17 +298,27 @@ export async function POST(req: Request) {
   const country = (body.country || "").toLowerCase();
   const city = (body.city || "").toLowerCase();
   const remoteOnly = Boolean(body.remoteOnly);
-  const keywords: string[] = body.keywords || [];
+  const keywords: string[] = Array.isArray(body.keywords) ? body.keywords : [];
+  const normalizedKeywords = uniqueNormalizedSkills(keywords);
+  // keep strict matching realistic: very long skill lists will almost always produce 0 results
+  const effectiveKeywords = normalizedKeywords.slice(0, 20);
   const minPostedDaysRaw = body.minPostedDays;
   const minPostedDays =
     typeof minPostedDaysRaw === "number" && Number.isFinite(minPostedDaysRaw)
       ? minPostedDaysRaw
       : null;
+  const minMatchRaw = body.minMatch;
+  const minMatch =
+    typeof minMatchRaw === "number" && Number.isFinite(minMatchRaw)
+      ? Math.max(0, Math.min(100, minMatchRaw))
+      : null;
+  const requireAllSkills = Boolean(body.requireAllSkills);
+  const failOpen = body.failOpen !== false;
 
   const [zimba, remotive, arbeitnow] = await Promise.all([
     withTimeout(fetchZimbaJobs(), 8000).catch(() => [] as Job[]),
-    withTimeout(fetchRemotiveJobs(keywords), 8000).catch(() => [] as Job[]),
-    withTimeout(fetchArbeitnowJobs(keywords), 8000).catch(() => [] as Job[]),
+    withTimeout(fetchRemotiveJobs(effectiveKeywords), 8000).catch(() => [] as Job[]),
+    withTimeout(fetchArbeitnowJobs(effectiveKeywords), 8000).catch(() => [] as Job[]),
   ]);
 
   let jobs = dedupeJobs([...zimba, ...remotive, ...arbeitnow]);
@@ -311,24 +359,40 @@ export async function POST(req: Request) {
 
   /* MATCH SCORE */
   jobs = jobs.map((j) => {
-    let score = 20; // base score
+    const matchedSkills = getSkillHits(j, effectiveKeywords);
+    const total = effectiveKeywords.map(normalizeSkill).filter(Boolean);
+    const denom = total.length || 1;
+    const percent = Math.round((matchedSkills.length / denom) * 100);
 
-    const text = `${j.title} ${j.description}`.toLowerCase();
+    let score = percent;
 
-    keywords.forEach((k) => {
-      const kk = k.toLowerCase().trim();
-      if (!kk) return;
-      if (text.includes(kk)) score += 12;
-      // extra boost for exact-ish occurrences in title
-      if (j.title.toLowerCase().includes(kk)) score += 8;
-    });
-
-    if (Boolean(j.remote) || j.location.toLowerCase().includes("remote"))
-      score += 15;
+    // small boosts for UX ordering
+    if (Boolean(j.remote) || j.location.toLowerCase().includes("remote")) score += 5;
     if (score > 100) score = 100;
 
-    return { ...j, match: score };
+    return { ...j, match: score, matchedSkills };
   });
+
+  /* STRICT MATCH FILTERS */
+  if (effectiveKeywords.length > 0) {
+    const beforeStrict = jobs;
+    if (requireAllSkills) {
+      jobs = jobs.filter((j) => {
+        const have = uniqueNormalizedSkills(j.matchedSkills || []);
+        const want = effectiveKeywords;
+        return want.every((k) => have.includes(k));
+      });
+    }
+    if (minMatch !== null) {
+      jobs = jobs.filter((j) => (j.match || 0) >= minMatch);
+    }
+
+    // If strict filters removed everything, fall back to showing scored jobs.
+    // This prevents the UI from looking broken while still ranking by match.
+    if (failOpen && jobs.length === 0) {
+      jobs = beforeStrict;
+    }
+  }
 
   jobs.sort((a, b) => {
     const aLocal = (a.country || "").toLowerCase().includes("zimbabwe") || a.source === "ZimbaJob";
