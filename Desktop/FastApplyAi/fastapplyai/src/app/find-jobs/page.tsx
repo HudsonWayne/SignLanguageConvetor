@@ -43,6 +43,7 @@ export default function FindJobsPage() {
   const [requireAllSkills, setRequireAllSkills] = useState(false);
   const [cvAlignedOnly, setCvAlignedOnly] = useState(true);
   const [searchNote, setSearchNote] = useState<string>("");
+  const [lastEffectiveMinMatch, setLastEffectiveMinMatch] = useState<number>(minMatch);
 
   // Applicant info (mock)
   const user = {
@@ -107,13 +108,17 @@ export default function FindJobsPage() {
       };
 
       setSearchNote("");
+      setLastEffectiveMinMatch(typeof basePayload.minMatch === "number" ? basePayload.minMatch : minMatch);
       let results = await doRequest(basePayload);
 
       if (cvAlignedOnly && results.length === 0) {
         // 1) relax city (city pages often have few tech postings)
         if (city) {
           results = await doRequest({ ...basePayload, city: "" });
-          if (results.length > 0) setSearchNote("No matches in selected city — showing Zimbabwe-wide matches.");
+          if (results.length > 0) {
+            setSearchNote("No matches in selected city — showing Zimbabwe-wide matches.");
+            setLastEffectiveMinMatch(typeof basePayload.minMatch === "number" ? basePayload.minMatch : minMatch);
+          }
         }
       }
 
@@ -122,7 +127,10 @@ export default function FindJobsPage() {
         const currentMin = typeof basePayload.minMatch === "number" ? basePayload.minMatch : null;
         if (currentMin !== null && currentMin > 30) {
           results = await doRequest({ ...basePayload, city: "", minMatch: 30 });
-          if (results.length > 0) setSearchNote("No matches at your threshold — lowered Minimum match to 30%.");
+          if (results.length > 0) {
+            setSearchNote("No matches at your threshold — lowered Minimum match to 30%.");
+            setLastEffectiveMinMatch(30);
+          }
         }
       }
 
@@ -130,8 +138,17 @@ export default function FindJobsPage() {
         const currentMin = typeof basePayload.minMatch === "number" ? basePayload.minMatch : null;
         if (currentMin !== null && currentMin > 10) {
           results = await doRequest({ ...basePayload, city: "", minMatch: 10 });
-          if (results.length > 0) setSearchNote("Still too strict — lowered Minimum match to 10%.");
+          if (results.length > 0) {
+            setSearchNote("Still too strict — lowered Minimum match to 10%.");
+            setLastEffectiveMinMatch(10);
+          }
         }
+      }
+
+      if (cvAlignedOnly && results.length === 0) {
+        setSearchNote(
+          "No CV-aligned jobs were found from the sources right now. Try lowering Minimum match to 10–30%, remove the city filter, or temporarily disable CV-aligned only."
+        );
       }
 
       setJobs(results);
@@ -146,7 +163,8 @@ export default function FindJobsPage() {
 
   const filteredJobs = jobs.filter((job) => {
     const loc = (job.location || "").toLowerCase();
-    if (cvAlignedOnly && (job.match || 0) < Math.max(10, minMatch)) return false;
+    const effectiveUiMin = cvAlignedOnly ? Math.max(10, lastEffectiveMinMatch) : 0;
+    if (cvAlignedOnly && (job.match || 0) < effectiveUiMin) return false;
     if (filter === "local") {
       if (!country.trim()) return true;
       return loc.includes(country.toLowerCase()) || loc.includes("zimbabwe");

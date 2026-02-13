@@ -192,6 +192,53 @@ function inferRoleIntentFromSkills(keywords: string[]) {
   };
 }
 
+function inferTargetRoleKeywordsFromSkills(keywords: string[]) {
+  const keys = uniqueNormalizedSkills(keywords);
+  const has = (k: string) => keys.includes(k);
+
+  const roleKeywords: string[] = [];
+  // broad software roles
+  roleKeywords.push("software developer", "software engineer", "developer", "engineer");
+
+  // web/frontend
+  if (has("react") || has("next") || has("javascript") || has("typescript") || has("html") || has("css")) {
+    roleKeywords.push("frontend", "front-end", "web developer", "ui developer");
+  }
+
+  // backend
+  if (has("node") || has("express") || has("python") || has("django") || has("flask") || has("java") || has("spring") || has("php") || has("laravel")) {
+    roleKeywords.push("backend", "back-end", "api", "fullstack", "full-stack");
+  }
+
+  // ui/ux
+  if (has("ui/ux") || has("ui") || has("ux")) {
+    roleKeywords.push("ui", "ux", "product designer", "ui/ux");
+  }
+
+  // cybersecurity
+  if (keys.some((k) => k.includes("cyber") || k.includes("security"))) {
+    roleKeywords.push("cyber", "security", "soc", "information security");
+  }
+
+  // data
+  if (keys.some((k) => k.includes("data") || k.includes("sql"))) {
+    roleKeywords.push("data analyst", "data", "bi", "reporting");
+  }
+
+  return uniqueNormalizedSkills(roleKeywords);
+}
+
+function computeRoleMatch(job: Job, roleKeywords: string[]) {
+  if (!roleKeywords.length) return 0;
+  const text = `${job.title} ${job.description}`.toLowerCase();
+  let hits = 0;
+  for (const k of roleKeywords) {
+    if (k && text.includes(k)) hits += 1;
+  }
+  // scale: 0..60
+  return Math.min(60, hits * 20);
+}
+
 function isLikelySoftwareJob(job: Job) {
   const text = `${job.title} ${job.description} ${(job.skills || []).join(" ")}`.toLowerCase();
   const allow = [
@@ -513,6 +560,8 @@ export async function POST(req: Request) {
   const normalizedKeywords = uniqueNormalizedSkills(keywords);
   // keep strict matching realistic: very long skill lists will almost always produce 0 results
   const effectiveKeywords = normalizedKeywords.slice(0, 20);
+  const targetRoleKeywords = inferTargetRoleKeywordsFromSkills(effectiveKeywords);
+
   const minPostedDaysRaw = body.minPostedDays;
   const minPostedDays =
     typeof minPostedDaysRaw === "number" && Number.isFinite(minPostedDaysRaw)
@@ -595,7 +644,10 @@ export async function POST(req: Request) {
     const denom = total.length || 1;
     const percent = Math.round((matchedSkills.length / denom) * 100);
 
-    let score = percent;
+    const roleMatch = computeRoleMatch(j, targetRoleKeywords);
+
+    // Blend: skills are primary, role match provides a floor when postings don't list stacks.
+    let score = Math.max(percent, roleMatch);
 
     // small boosts for UX ordering
     if (Boolean(j.remote) || j.location.toLowerCase().includes("remote")) score += 5;
