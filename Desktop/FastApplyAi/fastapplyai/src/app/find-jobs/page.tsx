@@ -27,6 +27,7 @@ interface Job {
 }
 
 export default function FindJobsPage() {
+
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
   const [country, setCountry] = useState("");
@@ -45,46 +46,30 @@ export default function FindJobsPage() {
   const [searchNote, setSearchNote] = useState("");
   const [lastEffectiveMinMatch, setLastEffectiveMinMatch] = useState(minMatch);
 
-  const user = {
-    fullName: "Wayne Benhura",
-    email: "wayne@email.com",
-    phone: "+263771000000",
-    resumeUrl: "/resume.pdf",
-  };
 
-  useEffect(() => {
-    setMounted(true);
-
-    const storedSkills = localStorage.getItem("skills");
-    const applied = localStorage.getItem("appliedJobs");
-
-    if (storedSkills) setSkills(JSON.parse(storedSkills));
-    if (applied) setAppliedJobs(JSON.parse(applied));
-  }, []);
-
-  // ✅ BEST HTML CLEANER (Production Level)
+  // ✅ HTML CLEANER
   const cleanJobDescription = (html?: string) => {
+
     if (!html) return "";
 
     try {
+
       const doc = new DOMParser().parseFromString(html, "text/html");
 
-      let text = doc.body.textContent || "";
-
-      text = text
-        .replace(/\s+/g, " ")
-        .replace(/&nbsp;/g, " ")
-        .trim();
-
-      return text;
+      return doc.body.textContent
+        ?.replace(/\s+/g, " ")
+        .trim() || "";
 
     } catch {
+
       return html.replace(/<[^>]+>/g, " ");
+
     }
+
   };
 
 
-  // ✅ Better trimming (doesn't cut words)
+  // ✅ SMART TRIM
   const trimDescription = (text: string, length = 180) => {
 
     if (text.length <= length) return text;
@@ -92,7 +77,54 @@ export default function FindJobsPage() {
     const trimmed = text.substring(0, length);
 
     return trimmed.substring(0, trimmed.lastIndexOf(" ")) + "...";
+
   };
+
+
+  useEffect(() => {
+
+    setMounted(true);
+
+    const storedSkills = localStorage.getItem("skills");
+
+    const applied = localStorage.getItem("appliedJobs");
+
+    if (storedSkills) setSkills(JSON.parse(storedSkills));
+
+    if (applied) setAppliedJobs(JSON.parse(applied));
+
+  }, []);
+
+
+
+  const addSkill = () => {
+
+    const s = skillInput.trim();
+
+    if (!s || skills.includes(s)) return;
+
+    const next = [...skills, s];
+
+    setSkills(next);
+
+    localStorage.setItem("skills", JSON.stringify(next));
+
+    setSkillInput("");
+
+  };
+
+
+
+  const removeSkill = (s: string) => {
+
+    const next = skills.filter(k => k !== s);
+
+    setSkills(next);
+
+    localStorage.setItem("skills", JSON.stringify(next));
+
+  };
+
 
 
   const fetchJobs = async () => {
@@ -105,11 +137,7 @@ export default function FindJobsPage() {
 
         method: "POST",
 
-        headers: {
-
-          "Content-Type": "application/json",
-
-        },
+        headers: { "Content-Type": "application/json" },
 
         body: JSON.stringify({
 
@@ -121,15 +149,19 @@ export default function FindJobsPage() {
 
           minMatch,
 
+          remoteOnly,
+
         }),
 
       });
 
       const data = await res.json();
 
-      setJobs(data);
+      setJobs(Array.isArray(data) ? data : []);
 
-    } catch {
+    }
+
+    catch {
 
       setJobs([]);
 
@@ -147,21 +179,45 @@ export default function FindJobsPage() {
   }, [mounted]);
 
 
+
+  const filteredJobs = jobs.filter(job => {
+
+    const loc = job.location?.toLowerCase() || "";
+
+    if (filter === "remote") {
+
+      return job.remote || loc.includes("remote");
+
+    }
+
+    if (filter === "local") {
+
+      return loc.includes("zimbabwe");
+
+    }
+
+    return true;
+
+  });
+
+
+
   const applyJob = (job: Job) => {
 
     window.open(job.link, "_blank");
 
     if (!appliedJobs.includes(job.link)) {
 
-      const updated = [...appliedJobs, job.link];
+      const next = [...appliedJobs, job.link];
 
-      setAppliedJobs(updated);
+      setAppliedJobs(next);
 
-      localStorage.setItem("appliedJobs", JSON.stringify(updated));
+      localStorage.setItem("appliedJobs", JSON.stringify(next));
 
     }
 
   };
+
 
 
   const formatAge = (iso?: string) => {
@@ -170,28 +226,62 @@ export default function FindJobsPage() {
 
     const diff = Date.now() - new Date(iso).getTime();
 
-    const hours = diff / (1000 * 60 * 60);
+    const h = diff / (1000 * 60 * 60);
 
-    if (hours < 24) return Math.round(hours) + "h ago";
+    if (h < 24) return Math.round(h) + "h ago";
 
-    return Math.round(hours / 24) + "d ago";
+    return Math.round(h / 24) + "d ago";
 
   };
 
 
+
+  const matchedSkillsForJob = (job: Job) => {
+
+    const text = cleanJobDescription(job.description).toLowerCase();
+
+    return skills.filter(skill =>
+
+      text.includes(skill.toLowerCase())
+
+    );
+
+  };
+
+
+
   if (!mounted) return null;
+
 
 
   return (
 
     <div className="min-h-screen bg-gradient-to-br from-indigo-200 via-sky-100 to-emerald-200">
 
+
+
+      {/* HEADER */}
+
+      <header className="text-center mt-16 mb-10">
+
+        <h1 className="text-5xl font-black">
+
+          Find Matching Jobs
+
+        </h1>
+
+      </header>
+
+
+
+      {/* JOB RESULTS */}
+
       <main className="px-6 pb-24">
 
 
         {loading && (
 
-          <p className="text-center text-lg animate-pulse">
+          <p className="text-center">
 
             Loading jobs...
 
@@ -200,21 +290,11 @@ export default function FindJobsPage() {
         )}
 
 
-        {!loading && jobs.length === 0 && (
-
-          <p className="text-center">
-
-            No jobs found
-
-          </p>
-
-        )}
-
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
 
 
-          {jobs.map((job, index) => {
+          {filteredJobs.map((job, index) => {
 
 
             const clean = cleanJobDescription(job.description);
@@ -229,9 +309,7 @@ export default function FindJobsPage() {
               className="bg-white p-6 rounded-2xl shadow-xl">
 
 
-                <a href={job.link}
-
-                target="_blank">
+                <a href={job.link} target="_blank">
 
                   <h2 className="text-xl font-bold hover:text-green-600">
 
@@ -242,21 +320,18 @@ export default function FindJobsPage() {
                 </a>
 
 
-                <p className="text-gray-600">
-
-                  {job.company}
-
-                </p>
+                <p>{job.company}</p>
 
 
-                <p className="text-gray-500 text-sm">
+                <p className="text-sm text-gray-500">
 
                   {job.location}
 
                 </p>
 
 
-                {/* ✅ CLEAN DESCRIPTION */}
+                {/* ✅ FIXED DESCRIPTION */}
+
                 <p className="mt-3 text-gray-700">
 
                   {trimmed}
@@ -264,7 +339,7 @@ export default function FindJobsPage() {
                 </p>
 
 
-                <p className="text-xs text-gray-400 mt-2">
+                <p className="text-xs text-gray-400">
 
                   Source: {job.source}
 
@@ -282,39 +357,38 @@ export default function FindJobsPage() {
                 )}
 
 
-                {/* Skills */}
-                {job.skills && (
 
-                  <div className="flex flex-wrap gap-2 mt-3">
+                {/* MATCH */}
 
-                    {job.skills.map(skill => (
+                <p className="text-green-600 font-bold mt-2">
 
-                      <span key={skill}
+                  {job.match || 0}% Match
 
-                      className="bg-blue-100 px-2 py-1 text-xs rounded">
-
-                        {skill}
-
-                      </span>
-
-                    ))}
-
-                  </div>
-
-                )}
+                </p>
 
 
-                {/* Match */}
-                {job.match && (
 
-                  <p className="mt-2 font-semibold text-green-600">
+                {/* MATCHED SKILLS */}
 
-                    {job.match}% Match
+                <div className="flex flex-wrap gap-2 mt-2">
 
-                  </p>
+                  {matchedSkillsForJob(job).map(skill => (
 
-                )}
+                    <span key={skill}
 
+                    className="bg-green-100 px-2 py-1 rounded text-xs">
+
+                      {skill}
+
+                    </span>
+
+                  ))}
+
+                </div>
+
+
+
+                {/* APPLY */}
 
                 <button
 
