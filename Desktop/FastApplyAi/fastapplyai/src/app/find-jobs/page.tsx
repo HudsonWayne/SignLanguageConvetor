@@ -3,13 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
-  FiUpload,
-  FiSearch,
-  FiBell,
-  FiUser,
-  FiMenu,
-  FiX,
   FiMapPin,
+  FiExternalLink,
+  FiCheckCircle,
 } from "react-icons/fi";
 
 interface Job {
@@ -23,31 +19,20 @@ interface Job {
   skills?: string[];
   match?: number;
   postedAt?: string;
-  matchedSkills?: string[];
 }
 
 export default function FindJobsPage() {
 
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
-  const [country, setCountry] = useState("");
-  const [city, setCity] = useState("");
-  const [remoteOnly, setRemoteOnly] = useState(false);
   const [skills, setSkills] = useState<string[]>([]);
-  const [skillInput, setSkillInput] = useState("");
-  const [mobileMenu, setMobileMenu] = useState(false);
+  const [appliedJobs, setAppliedJobs] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false);
   const [filter, setFilter] = useState<"all" | "local" | "remote">("all");
-  const [appliedJobs, setAppliedJobs] = useState<string[]>([]);
-  const [recency, setRecency] = useState<"any" | "1" | "7" | "30">("any");
-  const [minMatch, setMinMatch] = useState(70);
-  const [requireAllSkills, setRequireAllSkills] = useState(false);
-  const [cvAlignedOnly, setCvAlignedOnly] = useState(true);
-  const [searchNote, setSearchNote] = useState("");
-  const [lastEffectiveMinMatch, setLastEffectiveMinMatch] = useState(minMatch);
 
 
-  // ✅ HTML CLEANER
+
+  // CLEAN HTML
   const cleanJobDescription = (html?: string) => {
 
     if (!html) return "";
@@ -69,7 +54,8 @@ export default function FindJobsPage() {
   };
 
 
-  // ✅ SMART TRIM
+
+  // TRIM TEXT
   const trimDescription = (text: string, length = 180) => {
 
     if (text.length <= length) return text;
@@ -79,6 +65,7 @@ export default function FindJobsPage() {
     return trimmed.substring(0, trimmed.lastIndexOf(" ")) + "...";
 
   };
+
 
 
   useEffect(() => {
@@ -97,35 +84,6 @@ export default function FindJobsPage() {
 
 
 
-  const addSkill = () => {
-
-    const s = skillInput.trim();
-
-    if (!s || skills.includes(s)) return;
-
-    const next = [...skills, s];
-
-    setSkills(next);
-
-    localStorage.setItem("skills", JSON.stringify(next));
-
-    setSkillInput("");
-
-  };
-
-
-
-  const removeSkill = (s: string) => {
-
-    const next = skills.filter(k => k !== s);
-
-    setSkills(next);
-
-    localStorage.setItem("skills", JSON.stringify(next));
-
-  };
-
-
 
   const fetchJobs = async () => {
 
@@ -136,22 +94,6 @@ export default function FindJobsPage() {
       const res = await fetch("/api/search-jobs", {
 
         method: "POST",
-
-        headers: { "Content-Type": "application/json" },
-
-        body: JSON.stringify({
-
-          country,
-
-          city,
-
-          keywords: skills,
-
-          minMatch,
-
-          remoteOnly,
-
-        }),
 
       });
 
@@ -170,6 +112,7 @@ export default function FindJobsPage() {
     setLoading(false);
 
   };
+
 
 
   useEffect(() => {
@@ -241,9 +184,7 @@ export default function FindJobsPage() {
     const text = cleanJobDescription(job.description).toLowerCase();
 
     return skills.filter(skill =>
-
       text.includes(skill.toLowerCase())
-
     );
 
   };
@@ -256,38 +197,51 @@ export default function FindJobsPage() {
 
   return (
 
-    <div className="min-h-screen bg-gradient-to-br from-indigo-200 via-sky-100 to-emerald-200">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50">
 
 
 
       {/* HEADER */}
 
-      <header className="text-center mt-16 mb-10">
+      <header className="text-center pt-16 pb-10">
 
-        <h1 className="text-5xl font-black">
+        <h1 className="text-5xl font-extrabold text-gray-900">
 
           Find Matching Jobs
 
         </h1>
 
+        <p className="text-gray-500 mt-3">
+
+          Jobs matched to your CV skills
+
+        </p>
+
       </header>
 
 
 
-      {/* JOB RESULTS */}
+      {/* JOB GRID */}
 
-      <main className="px-6 pb-24">
+      <main className="max-w-7xl mx-auto px-6 pb-20">
 
 
         {loading && (
 
-          <p className="text-center">
+          <div className="text-center py-20">
 
-            Loading jobs...
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-green-500 mx-auto mb-6"/>
 
-          </p>
+            <p className="text-gray-500 text-lg">
+
+              Finding best jobs for you...
+
+            </p>
+
+          </div>
 
         )}
+
 
 
 
@@ -301,104 +255,160 @@ export default function FindJobsPage() {
 
             const trimmed = trimDescription(clean);
 
+            const matchedSkills = matchedSkillsForJob(job);
+
+            const applied = appliedJobs.includes(job.link);
+
 
             return (
 
               <div key={index}
 
-              className="bg-white p-6 rounded-2xl shadow-xl">
+
+              className="bg-white rounded-2xl shadow-md hover:shadow-2xl transition duration-300 border border-gray-100 p-6 flex flex-col justify-between">
 
 
-                <a href={job.link} target="_blank">
+                {/* TOP */}
 
-                  <h2 className="text-xl font-bold hover:text-green-600">
-
-                    {job.title}
-
-                  </h2>
-
-                </a>
+                <div>
 
 
-                <p>{job.company}</p>
+                  <a href={job.link} target="_blank">
+
+                    <h2 className="text-xl font-bold text-gray-900 hover:text-green-600 transition">
+
+                      {job.title}
+
+                    </h2>
+
+                  </a>
 
 
-                <p className="text-sm text-gray-500">
+                  <p className="text-gray-600 font-medium mt-1">
 
-                  {job.location}
-
-                </p>
-
-
-                {/* ✅ FIXED DESCRIPTION */}
-
-                <p className="mt-3 text-gray-700">
-
-                  {trimmed}
-
-                </p>
-
-
-                <p className="text-xs text-gray-400">
-
-                  Source: {job.source}
-
-                </p>
-
-
-                {job.postedAt && (
-
-                  <p className="text-xs text-gray-400">
-
-                    {formatAge(job.postedAt)}
+                    {job.company}
 
                   </p>
 
-                )}
+
+
+                  <div className="flex items-center text-gray-400 text-sm mt-1 gap-1">
+
+                    <FiMapPin/>
+
+                    {job.location}
+
+                  </div>
 
 
 
-                {/* MATCH */}
+                  <p className="text-gray-600 mt-4 text-sm leading-relaxed">
 
-                <p className="text-green-600 font-bold mt-2">
+                    {trimmed}
 
-                  {job.match || 0}% Match
-
-                </p>
+                  </p>
 
 
-
-                {/* MATCHED SKILLS */}
-
-                <div className="flex flex-wrap gap-2 mt-2">
-
-                  {matchedSkillsForJob(job).map(skill => (
-
-                    <span key={skill}
-
-                    className="bg-green-100 px-2 py-1 rounded text-xs">
-
-                      {skill}
-
-                    </span>
-
-                  ))}
 
                 </div>
 
 
 
-                {/* APPLY */}
+                {/* BOTTOM */}
 
-                <button
+                <div className="mt-6">
 
-                onClick={() => applyJob(job)}
 
-                className="mt-4 w-full bg-green-500 text-white py-2 rounded-xl">
+                  {/* MATCH */}
 
-                  Apply 🤖
+                  <div className="flex items-center justify-between mb-3">
 
-                </button>
+                    <span className="text-sm font-semibold text-green-600">
+
+                      {job.match || 0}% Match
+
+                    </span>
+
+
+                    {job.postedAt && (
+
+                      <span className="text-xs text-gray-400">
+
+                        {formatAge(job.postedAt)}
+
+                      </span>
+
+                    )}
+
+                  </div>
+
+
+
+                  {/* MATCHED SKILLS */}
+
+                  <div className="flex flex-wrap gap-2 mb-4">
+
+                    {matchedSkills.map(skill => (
+
+                      <span key={skill}
+
+                      className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-medium">
+
+                        {skill}
+
+                      </span>
+
+                    ))}
+
+                  </div>
+
+
+
+                  {/* APPLY BUTTON */}
+
+                  <button
+
+                    onClick={() => applyJob(job)}
+
+                    className={`w-full py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2
+
+
+                    ${applied
+
+                    ? "bg-gray-200 text-gray-500"
+
+                    : "bg-green-500 hover:bg-green-600 text-white shadow-md hover:shadow-lg"
+
+                    }`}
+
+
+                  >
+
+                    {applied
+
+                    ? <>
+
+                        <FiCheckCircle/>
+
+                        Applied
+
+                      </>
+
+                    : <>
+
+                        Apply Now
+
+                        <FiExternalLink/>
+
+                      </>
+
+                    }
+
+                  </button>
+
+
+
+                </div>
 
 
               </div>
