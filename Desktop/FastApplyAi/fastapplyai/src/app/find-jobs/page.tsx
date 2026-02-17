@@ -1,140 +1,71 @@
-import { NextResponse } from "next/server";
-
-export async function POST(req: Request) {
-
-  try {
-
-    const body = await req.json();
-
-    const keywords: string[] = body.keywords || [];
-
-    const minMatch: number = body.minMatch || 0;
-
-
-
-    // ✅ Fetch real jobs from Remotive
-
-    const res = await fetch(
-
-      "https://remotive.com/api/remote-jobs"
-
-    );
-
-
-
-    const data = await res.json();
-
-
-
-    const jobs = data.jobs || [];
-
-
-
-    // ✅ Process jobs
-
-    const processed = jobs.map((job: any) => {
-
-      const description = job.description || "";
-
-
-
-      const text = (
-
-        job.title +
-
-        " " +
-
-        description +
-
-        " " +
-
-        job.category
-
-      ).toLowerCase();
-
-
-
-      // Match %
-
-      let match = 0;
-
-
-
-      if (keywords.length > 0) {
-
-        const matches = keywords.filter(skill =>
-
-          text.includes(skill.toLowerCase())
-
-        );
-
-
-
-        match = Math.round(
-
-          (matches.length / keywords.length) * 100
-
-        );
-
-      }
-
-
-
-      return {
-
-        title: job.title,
-
-        company: job.company_name,
-
-        description: description,
-
-        location: job.candidate_required_location,
-
-        link: job.url,
-
-        source: "Remotive",
-
-        match: match,
-
-        remote: true,
-
-        postedAt: job.publication_date,
-
-        skills: job.tags,
-
-        matchedSkills: keywords.filter(skill =>
-
-          text.includes(skill.toLowerCase())
-
-        ),
-
-      };
-
-    });
-
-
-
-    // Filter
-
-    const filtered = processed.filter(
-
-      (job: any) => job.match >= minMatch
-
-    );
-
-
-
-    return NextResponse.json(filtered);
-
-
-
-  } catch (error) {
-
-    console.log(error);
-
-    return NextResponse.json([]);
-
-  }
-
+"use client";
+
+import { useState } from "react";
+
+export default function FindJobsPage() {
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [cvText, setCvText] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSearch = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/find-jobs", {
+        method: "POST",
+        body: JSON.stringify({ cvText }),
+      });
+      const data = await res.json();
+      setJobs(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="p-6 max-w-4xl mx-auto">
+      <h1 className="text-3xl font-bold mb-4">QuickApply Job Search</h1>
+
+      <textarea
+        placeholder="Paste your CV text here..."
+        value={cvText}
+        onChange={(e) => setCvText(e.target.value)}
+        className="w-full border p-3 rounded mb-4"
+        rows={6}
+      />
+
+      <button
+        onClick={handleSearch}
+        className="bg-blue-600 text-white px-4 py-2 rounded mb-6"
+      >
+        {loading ? "Searching..." : "Search Jobs"}
+      </button>
+
+      <div>
+        {jobs.length === 0 && !loading && <p>No jobs found yet.</p>}
+
+        {jobs.map((job, idx) => (
+          <div
+            key={idx}
+            className="border p-3 rounded mb-3 hover:shadow"
+          >
+            <a
+              href={job.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-bold text-blue-700"
+            >
+              {job.title}
+            </a>
+            <div className="text-sm text-gray-600">
+              {job.company} - {job.location}
+            </div>
+            <div>Match: {job.match}%</div>
+            <div className="text-xs text-gray-500">{job.source}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
-
