@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { load } from "cheerio";
 
 /* ================= TYPES ================= */
+
 interface Job {
   title: string;
   company: string;
@@ -16,169 +17,330 @@ interface Job {
 }
 
 /* ================= UNIVERSAL SKILL EXTRACTOR ================= */
-function extractSkillsFromCV(cvText: string): string[] {
-  const COMMON_WORDS = [
-    "the","and","for","with","from","that","this",
-    "have","has","had","you","your","are","was",
-    "were","will","shall","can","could","would",
-    "job","work","experience","years","skills","section"
-  ];
+/*
+Works for ANY profession:
+Marketing
+Driver
+Teacher
+Accountant
+Nurse
+Developer
+etc
+*/
 
-  const words = cvText
+function extractSkills(text: string): string[] {
+
+  const STOP_WORDS = new Set([
+    "the","and","for","with","from","that","this",
+    "have","has","had","you","your","are","was","were",
+    "will","shall","can","could","would","should",
+    "job","work","experience","years","skills","section",
+    "using","use","used","over","under","between",
+    "a","an","to","of","in","on","at","by","or"
+  ]);
+
+  const clean = text
     .toLowerCase()
-    .replace(/[^a-z0-9 ]/g, "")
+    .replace(/[^a-z0-9+#. ]/g," ")
     .split(/\s+/);
 
-  const skills: string[] = [];
+  const words: string[] = [];
 
-  for (const word of words) {
-    if (word.length > 2 && !COMMON_WORDS.includes(word) && !skills.includes(word)) {
-      skills.push(word);
+  for(const w of clean){
+
+    if(
+      w.length > 2 &&
+      w.length < 25 &&
+      !STOP_WORDS.has(w) &&
+      !words.includes(w)
+    ){
+      words.push(w);
     }
+
   }
 
-  return skills.slice(0, 50); // Limit to 50 skills
+  return words.slice(0,60);
+
 }
+
 
 /* ================= FETCH HTML ================= */
-async function fetchHTML(url: string) {
-  try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0" },
-      cache: "no-store",
+
+async function fetchHTML(url: string){
+
+  try{
+
+    const res = await fetch(url,{
+      headers:{ "User-Agent":"Mozilla/5.0" },
+      cache:"no-store"
     });
+
     return await res.text();
-  } catch {
+
+  }catch{
+
     return "";
+
   }
+
 }
 
-/* ================= ZIMBAJOB ================= */
-async function fetchZimJobs(): Promise<Job[]> {
-  const jobs: Job[] = [];
-  const html = await fetchHTML("https://www.zimbajob.com/job-vacancies-search-zimbabwe");
+
+/* ================= ZIM JOBS ================= */
+
+async function fetchZimJobs():Promise<Job[]>{
+
+  const jobs:Job[] = [];
+
+  const html = await fetchHTML(
+    "https://www.zimbajob.com/job-vacancies-search-zimbabwe"
+  );
+
   const $ = load(html);
 
-  $(".job-listing").each((i, el) => {
-    const title = $(el).find("a.job-title").text().trim();
-    const link = $(el).find("a.job-title").attr("href");
-    const company = $(el).find(".company-name").text().trim();
-    const location = $(el).find(".job-location").text().trim();
-    const description = $(el).find(".job-description").text().trim();
+  $(".job-listing").each((i,el)=>{
 
-    if (!title || !link) return;
+    const title =
+      $(el).find("a.job-title").text().trim();
+
+    const link =
+      $(el).find("a.job-title").attr("href");
+
+    const company =
+      $(el).find(".company-name").text().trim();
+
+    const location =
+      $(el).find(".job-location").text().trim();
+
+    const description =
+      $(el).find(".job-description").text().trim();
+
+    if(!title || !link) return;
 
     jobs.push({
+
       title,
       company,
       location,
       description,
-      link: "https://www.zimbajob.com" + link,
-      source: "ZimJob",
-      skills: extractSkillsFromCV(description),
-      postedAt: new Date().toISOString(),
+
+      link:"https://www.zimbajob.com"+link,
+
+      source:"ZimJob",
+
+      skills:extractSkills(
+        title+" "+description
+      ),
+
+      postedAt:new Date().toISOString()
+
     });
+
   });
 
   return jobs;
+
 }
+
 
 /* ================= IHARARE ================= */
-async function fetchIHarare(): Promise<Job[]> {
-  const jobs: Job[] = [];
-  const html = await fetchHTML("https://ihararejobs.com/");
+
+async function fetchIHarare():Promise<Job[]>{
+
+  const jobs:Job[] = [];
+
+  const html = await fetchHTML(
+    "https://ihararejobs.com/"
+  );
+
   const $ = load(html);
 
-  $("a[href*='/job/']").each((i, el) => {
-    const title = $(el).text().trim();
-    const link = $(el).attr("href");
+  $("a[href*='/job/']").each((i,el)=>{
 
-    if (!title || !link) return;
+    const title =
+      $(el).text().trim();
+
+    const link =
+      $(el).attr("href");
+
+    if(!title || !link) return;
 
     jobs.push({
+
       title,
-      company: "Zimbabwe Employer",
-      location: "Zimbabwe",
-      description: title,
+
+      company:"Zimbabwe Employer",
+
+      location:"Zimbabwe",
+
+      description:title,
+
       link,
-      source: "iHarare",
-      skills: extractSkillsFromCV(title),
-      postedAt: new Date().toISOString(),
+
+      source:"iHarare",
+
+      skills:extractSkills(title),
+
+      postedAt:new Date().toISOString()
+
     });
+
   });
 
   return jobs;
+
 }
 
+
 /* ================= REMOTE JOBS ================= */
-async function fetchRemoteJobs(): Promise<Job[]> {
-  const jobs: Job[] = [];
-  const res = await fetch("https://remotive.com/api/remote-jobs");
+
+async function fetchRemoteJobs():Promise<Job[]>{
+
+  const jobs:Job[] = [];
+
+  const res =
+    await fetch("https://remotive.com/api/remote-jobs");
+
   const json = await res.json();
 
-  for (const j of json.jobs.slice(0, 30)) {
+  for(const j of json.jobs.slice(0,40)){
+
     jobs.push({
-      title: j.title,
-      company: j.company_name,
-      location: "Remote",
-      description: j.description,
-      link: j.url,
-      source: "Remotive",
-      skills: extractSkillsFromCV(j.description),
-      remote: true,
-      postedAt: j.publication_date,
+
+      title:j.title,
+
+      company:j.company_name,
+
+      location:"Remote",
+
+      description:j.description,
+
+      link:j.url,
+
+      source:"Remotive",
+
+      remote:true,
+
+      skills:extractSkills(
+        j.title+" "+j.description
+      ),
+
+      postedAt:j.publication_date
+
     });
+
   }
 
   return jobs;
+
 }
+
 
 /* ================= MATCH SCORE ================= */
-function matchScore(job: Job, userSkills: string[]): number {
-  if (userSkills.length === 0) return 50;
 
-  let match = 0;
-  for (const skill of userSkills) {
-    if (job.skills.includes(skill.toLowerCase())) {
-      match++;
-    }
+function matchScore(
+
+  job:Job,
+  userSkills:string[]
+
+){
+
+  if(userSkills.length===0)
+    return 50;
+
+  let score=0;
+
+  for(const skill of userSkills){
+
+    if(job.skills.includes(skill))
+      score++;
+
   }
 
-  return Math.round((match / userSkills.length) * 100);
+  return Math.round(
+    score/userSkills.length*100
+  );
+
 }
 
+
 /* ================= MAIN API ================= */
-export async function POST(req: Request) {
-  try {
+
+export async function POST(req:Request){
+
+  try{
+
     const body = await req.json();
 
-    // Accept either "cvText" or "keywords"
-    const cvText: string = body.cvText || "";
-    const keywordSkills: string[] = body.keywords || [];
-    const userSkills = [...extractSkillsFromCV(cvText), ...keywordSkills];
+    const cvText:string =
+      body.cvText || "";
 
-    // Fetch all jobs concurrently
-    const [zim, iharare, remote] = await Promise.all([
+    const keywords:string[] =
+      body.keywords || [];
+
+    const userSkills = [
+
+      ...extractSkills(cvText),
+
+      ...keywords.map(k=>k.toLowerCase())
+
+    ];
+
+
+    const [
+
+      zim,
+      iharare,
+      remote
+
+    ] = await Promise.all([
+
       fetchZimJobs(),
       fetchIHarare(),
-      fetchRemoteJobs(),
+      fetchRemoteJobs()
+
     ]);
 
-    let jobs = [...zim, ...iharare, ...remote];
 
-    // Compute match score
-    jobs = jobs.map(job => ({
+    let jobs = [
+
+      ...zim,
+      ...iharare,
+      ...remote
+
+    ];
+
+
+    jobs = jobs.map(job=>({
+
       ...job,
-      match: matchScore(job, userSkills),
+
+      match:matchScore(
+
+        job,
+        userSkills
+
+      )
+
     }));
 
-    // Sort best matches first
-    jobs.sort((a, b) => (b.match || 0) - (a.match || 0));
 
-    return NextResponse.json(jobs.slice(0, 50));
+    jobs.sort(
 
-  } catch (error) {
-    console.log(error);
+      (a,b)=>(b.match||0)-(a.match||0)
+
+    );
+
+
+    return NextResponse.json(jobs);
+
+
+  }catch(e){
+
+    console.log(e);
+
     return NextResponse.json([]);
+
   }
+
 }
