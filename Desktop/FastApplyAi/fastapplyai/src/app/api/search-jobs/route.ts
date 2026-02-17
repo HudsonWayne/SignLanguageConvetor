@@ -16,7 +16,6 @@ interface Job {
 }
 
 /* ================= UNIVERSAL SKILL EXTRACTOR ================= */
-// Works for any profession by extracting main words from CV text
 function extractSkillsFromCV(cvText: string): string[] {
   const COMMON_WORDS = [
     "the","and","for","with","from","that","this",
@@ -153,7 +152,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    // Accept either "cvText" or "keywords" array
+    // Accept either "cvText" or "keywords"
     const cvText: string = body.cvText || "";
     const keywordSkills: string[] = body.keywords || [];
     const userSkills = [...extractSkillsFromCV(cvText), ...keywordSkills];
