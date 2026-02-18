@@ -5,10 +5,12 @@ import { useEffect, useState } from "react";
 import {
   FiUpload,
   FiSearch,
-  FiBriefcase,
   FiMapPin,
   FiX,
   FiPlus,
+  FiUser,
+  FiBell,
+  FiMenu,
 } from "react-icons/fi";
 
 interface Job {
@@ -22,463 +24,334 @@ interface Job {
 }
 
 export default function FindJobsPage() {
+  /* ================= MOBILE NAV ================= */
 
-/* ================= STATE ================= */
+  const [mobileMenu, setMobileMenu] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-const [jobs,setJobs]=useState<Job[]>([]);
-const [loading,setLoading]=useState(false);
-const [skills,setSkills]=useState<string[]>([]);
-const [skillInput,setSkillInput]=useState("");
-const [mounted,setMounted]=useState(false);
-const [cvUploaded,setCvUploaded]=useState(false);
+  /* ================= STATE ================= */
 
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [skills, setSkills] = useState<string[]>([]);
+  const [skillInput, setSkillInput] = useState("");
+  const [mounted, setMounted] = useState(false);
+  const [cvUploaded, setCvUploaded] = useState(false);
 
-/* ================= LOAD ================= */
+  /* ================= LOAD ================= */
 
-useEffect(()=>{
+  useEffect(() => {
+    setMounted(true);
 
-setMounted(true);
+    const savedSkills = localStorage.getItem("skills");
+    const savedCV = localStorage.getItem("cvText");
 
-const savedSkills=localStorage.getItem("skills");
-const savedCV=localStorage.getItem("cvText");
+    if (savedSkills) setSkills(JSON.parse(savedSkills));
+    if (savedCV) setCvUploaded(true);
 
-if(savedSkills) setSkills(JSON.parse(savedSkills));
-if(savedCV) setCvUploaded(true);
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+      if (window.innerWidth >= 768) setMobileMenu(false);
+    };
 
-},[]);
+    handleResize();
+    window.addEventListener("resize", handleResize);
 
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
-/* ================= FETCH JOBS ================= */
+  /* ================= FETCH JOBS ================= */
 
-const fetchJobs = async(cvOverride?:string)=>{
+  const fetchJobs = async (cvOverride?: string) => {
+    setLoading(true);
 
-setLoading(true);
+    const cvText = cvOverride || localStorage.getItem("cvText") || "";
 
-const cvText=cvOverride || localStorage.getItem("cvText") || "";
+    try {
+      const res = await fetch("/api/search-jobs", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          cvText,
+          keywords: skills,
+        }),
+      });
 
-try{
+      const data = await res.json();
 
-const res=await fetch("/api/search-jobs",{
+      setJobs(data);
+    } catch (err) {
+      console.log(err);
+    }
 
-method:"POST",
-headers:{ "Content-Type":"application/json" },
+    setLoading(false);
+  };
 
-body:JSON.stringify({
+  /* ================= UPLOAD ================= */
 
-cvText,
-keywords:skills
+  const handleCVUpload = async (e: any) => {
+    const file = e.target.files?.[0];
 
-})
+    if (!file) return;
 
-});
+    const text = await file.text();
 
-const data=await res.json();
+    localStorage.setItem("cvText", text);
 
-setJobs(data);
+    setCvUploaded(true);
 
-}catch(err){
+    fetchJobs(text);
+  };
 
-console.log(err);
+  /* ================= SKILLS ================= */
 
-}
+  const addSkill = () => {
+    const s = skillInput.trim();
 
-setLoading(false);
+    if (!s || skills.includes(s)) return;
 
-};
+    const updated = [...skills, s];
 
+    setSkills(updated);
 
+    localStorage.setItem("skills", JSON.stringify(updated));
 
-/* ================= UPLOAD ================= */
+    setSkillInput("");
+  };
 
-const handleCVUpload=async(e:any)=>{
+  const removeSkill = (s: string) => {
+    const updated = skills.filter((k) => k !== s);
 
-const file=e.target.files?.[0];
+    setSkills(updated);
 
-if(!file) return;
+    localStorage.setItem("skills", JSON.stringify(updated));
+  };
 
-const text=await file.text();
+  /* ================= AUTO LOAD ================= */
 
-localStorage.setItem("cvText",text);
+  useEffect(() => {
+    if (mounted) fetchJobs();
+  }, [mounted]);
 
-setCvUploaded(true);
+  if (!mounted) return null;
 
-fetchJobs(text);
+  /* ================= UI ================= */
 
-};
+  return (
+    <div
+      className={`min-h-screen bg-gradient-to-br from-purple-300 via-blue-200 to-green-200 text-gray-900 font-sans overflow-x-hidden bg-[length:200%_200%] ${
+        isMobile ? "" : "animate-gradientFlow"
+      }`}
+    >
+      {/* ================= NAVBAR ================= */}
 
+      <nav className="relative flex items-center justify-between px-6 md:px-20 py-4 shadow-md bg-white sticky top-0 z-50 backdrop-blur-md bg-opacity-90">
 
+        <div className="flex items-center gap-2 text-xl font-bold">
 
-/* ================= SKILLS ================= */
+          <div className="bg-green-500 text-white rounded-md px-2 py-1">
+            QA
+          </div>
 
-const addSkill=()=>{
+          QuickApplyAI
 
-const s=skillInput.trim();
+        </div>
 
-if(!s || skills.includes(s)) return;
+        <div className="hidden md:flex items-center gap-6 text-gray-700 font-medium">
 
-const updated=[...skills,s];
+          <Link href="/dashboard" className="flex items-center gap-1 bg-green-500 text-white px-3 py-2 rounded-md hover:bg-green-600">
+            <FiUser /> Dashboard
+          </Link>
 
-setSkills(updated);
+          <Link href="/upload-cv" className="flex items-center gap-1 hover:text-green-600">
+            <FiUpload /> Upload CV
+          </Link>
 
-localStorage.setItem("skills",JSON.stringify(updated));
+          <Link href="/find-jobs" className="flex items-center gap-1 text-green-600 font-semibold">
+            <FiSearch /> Find Jobs
+          </Link>
 
-setSkillInput("");
+          <Link href="/notifications" className="flex items-center gap-1 hover:text-green-600">
+            <FiBell /> Notifications
+          </Link>
 
-};
+        </div>
 
-const removeSkill=(s:string)=>{
+        <button className="md:hidden text-2xl" onClick={() => setMobileMenu(!mobileMenu)}>
+          <FiMenu />
+        </button>
 
-const updated=skills.filter(k=>k!==s);
+      </nav>
 
-setSkills(updated);
+      {/* HERO */}
 
-localStorage.setItem("skills",JSON.stringify(updated));
+      <div className="text-center mt-14 px-4">
 
-};
+        <h1 className="text-4xl md:text-5xl font-extrabold">
 
+          Find Your Dream Job
 
-/* ================= LOAD AUTO ================= */
+        </h1>
 
-useEffect(()=>{
+        <p className="text-gray-600 mt-3">
 
-if(mounted) fetchJobs();
+          Upload CV, add skills, and let AI match jobs instantly
 
-},[mounted]);
+        </p>
 
+      </div>
 
+      {/* CV UPLOAD */}
 
-if(!mounted) return null;
+      <div className="max-w-xl mx-auto mt-10 px-4">
 
+        <label className="bg-white rounded-2xl shadow-lg p-8 text-center cursor-pointer block hover:shadow-xl transition">
 
+          <FiUpload className="mx-auto text-4xl text-green-500 mb-3" />
 
-/* ================= UI ================= */
+          <p className="font-semibold">
 
-return(
+            Upload CV
 
-<div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-blue-600">
+          </p>
 
+          <input type="file" className="hidden" onChange={handleCVUpload} />
 
-{/* NAVBAR */}
+        </label>
 
+        {cvUploaded && (
+          <p className="text-green-600 text-center mt-3 font-medium">
+            CV uploaded successfully
+          </p>
+        )}
 
-<nav className="backdrop-blur-lg bg-white/20 border-b border-white/20 sticky top-0 z-50">
+      </div>
 
+      {/* SKILLS */}
 
-<div className="max-w-7xl mx-auto flex justify-between items-center p-4">
+      <div className="max-w-xl mx-auto mt-8 bg-white rounded-2xl shadow-lg p-6">
 
+        <div className="flex gap-3">
 
-<h1 className="text-white font-bold text-2xl">
+          <input
+            value={skillInput}
+            onChange={(e) => setSkillInput(e.target.value)}
+            placeholder="Add skill"
+            className="flex-1 p-3 border rounded-lg"
+          />
 
-QuickApplyAI
+          <button
+            onClick={addSkill}
+            className="bg-green-500 text-white px-4 rounded-lg hover:bg-green-600"
+          >
+            <FiPlus />
+          </button>
 
-</h1>
+        </div>
 
+        <div className="flex flex-wrap gap-2 mt-4">
 
-<div className="flex gap-6 text-white font-medium">
+          {skills.map((s) => (
+            <div key={s} className="bg-green-100 text-green-700 px-4 py-1 rounded-full flex gap-2">
 
-<Link href="/dashboard">Dashboard</Link>
+              {s}
 
-<Link href="/upload-cv">Upload CV</Link>
+              <FiX onClick={() => removeSkill(s)} className="cursor-pointer" />
 
-</div>
+            </div>
+          ))}
 
+        </div>
 
-</div>
+      </div>
 
+      {/* SEARCH */}
 
-</nav>
+      <div className="text-center mt-8">
 
+        <button
+          onClick={() => fetchJobs()}
+          className="bg-green-500 text-white px-8 py-3 rounded-xl font-semibold hover:bg-green-600 shadow-md"
+        >
+          Search Jobs
+        </button>
 
+      </div>
 
-{/* HERO */}
+      {/* RESULTS */}
 
+      <div className="max-w-7xl mx-auto mt-12 px-6 pb-20">
 
-<div className="text-center text-white mt-12">
+        {loading && (
+          <div className="text-center text-xl font-semibold">
+            Searching jobs...
+          </div>
+        )}
 
+        <div className="grid md:grid-cols-3 gap-6">
 
-<h1 className="text-5xl font-bold">
+          {jobs.map((job, i) => (
 
-Find Your Dream Job
+            <div key={i} className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition">
 
-</h1>
+              <h2 className="font-bold text-lg">
 
+                {job.title}
 
-<p className="mt-4 opacity-90">
+              </h2>
 
-AI powered job matching for ANY profession
+              <p className="text-gray-600">
 
-</p>
+                {job.company}
 
+              </p>
 
-</div>
+              <div className="flex gap-2 text-sm text-gray-500 mt-1">
 
+                <FiMapPin />
 
+                {job.location}
 
-{/* CV UPLOAD */}
+              </div>
 
+              {/* MATCH */}
 
-<div className="max-w-xl mx-auto mt-10">
+              <div className="mt-4">
 
+                <div className="text-sm font-medium">
 
-<label className="flex flex-col items-center justify-center bg-white/20 backdrop-blur-lg border border-white/30 rounded-xl p-8 cursor-pointer hover:bg-white/30 transition">
+                  Match {job.match}%
 
+                </div>
 
-<FiUpload size={40} className="text-white mb-3"/>
+                <div className="bg-gray-200 h-2 rounded-full mt-1">
 
+                  <div
+                    className="bg-green-500 h-2 rounded-full"
+                    style={{ width: `${job.match}%` }}
+                  />
 
-<p className="text-white font-semibold">
+                </div>
 
-Upload Your CV
+              </div>
 
-</p>
+              <button
+                onClick={() => window.open(job.link)}
+                className="mt-5 w-full bg-green-500 text-white py-2 rounded-lg hover:bg-green-600"
+              >
+                Apply Now
+              </button>
 
+            </div>
 
-<input
+          ))}
 
-type="file"
+        </div>
 
-className="hidden"
+      </div>
 
-onChange={handleCVUpload}
-
-/>
-
-
-</label>
-
-
-{cvUploaded && (
-
-<p className="text-green-300 mt-3 text-center">
-
-CV uploaded successfully
-
-</p>
-
-)}
-
-
-</div>
-
-
-
-{/* SKILLS */}
-
-
-<div className="max-w-xl mx-auto mt-8 bg-white/20 backdrop-blur-lg rounded-xl p-6">
-
-
-<div className="flex gap-3">
-
-
-<input
-
-value={skillInput}
-
-onChange={(e)=>setSkillInput(e.target.value)}
-
-placeholder="Add skill"
-
-className="flex-1 p-3 rounded-lg outline-none"
-
-/>
-
-
-<button
-
-onClick={addSkill}
-
-className="bg-white text-indigo-600 p-3 rounded-lg"
-
->
-
-<FiPlus/>
-
-</button>
-
-
-</div>
-
-
-
-<div className="flex flex-wrap gap-2 mt-4">
-
-
-{skills.map(s=>(
-
-<div
-
-key={s}
-
-className="bg-white text-indigo-600 px-4 py-1 rounded-full flex items-center gap-2"
-
->
-
-{s}
-
-<FiX
-
-className="cursor-pointer"
-
-onClick={()=>removeSkill(s)}
-
-/>
-
-</div>
-
-))}
-
-
-</div>
-
-
-</div>
-
-
-
-{/* SEARCH BUTTON */}
-
-
-<div className="text-center mt-8">
-
-
-<button
-
-onClick={()=>fetchJobs()}
-
-className="bg-white text-indigo-600 px-8 py-3 rounded-xl font-bold hover:scale-105 transition"
-
->
-
-Search Jobs
-
-</button>
-
-
-</div>
-
-
-
-{/* RESULTS */}
-
-
-<div className="max-w-7xl mx-auto mt-12 pb-20">
-
-
-{loading && (
-
-<div className="text-center text-white text-xl">
-
-Searching jobs...
-
-</div>
-
-)}
-
-
-
-<div className="grid md:grid-cols-3 gap-6">
-
-
-{jobs.map((job,i)=>(
-
-
-<div
-
-key={i}
-
-className="bg-white rounded-xl p-6 hover:scale-105 transition shadow-xl"
-
->
-
-
-<h2 className="font-bold text-lg">
-
-{job.title}
-
-</h2>
-
-
-<p className="text-gray-600">
-
-{job.company}
-
-</p>
-
-
-<div className="flex items-center gap-2 text-gray-500 text-sm mt-1">
-
-<FiMapPin/>
-
-{job.location}
-
-</div>
-
-
-
-{/* MATCH BAR */}
-
-
-<div className="mt-4">
-
-
-<div className="text-sm">
-
-Match {job.match}%
-
-</div>
-
-
-<div className="w-full bg-gray-200 h-2 rounded-full mt-1">
-
-
-<div
-
-className="bg-green-500 h-2 rounded-full"
-
-style={{width:`${job.match}%`}}
-
->
-
-
-</div>
-
-
-</div>
-
-
-</div>
-
-
-
-<button
-
-onClick={()=>window.open(job.link)}
-
-className="mt-5 w-full bg-indigo-600 text-white py-2 rounded-lg"
-
->
-
-Apply Now
-
-</button>
-
-
-</div>
-
-
-))}
-
-
-</div>
-
-
-</div>
-
-
-</div>
-
-
-);
-
+    </div>
+  );
 }
