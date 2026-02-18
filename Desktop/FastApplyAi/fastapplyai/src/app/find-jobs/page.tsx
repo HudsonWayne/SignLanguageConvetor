@@ -10,7 +10,6 @@ import {
   FiPlus,
   FiUser,
   FiBell,
-  FiMenu,
   FiBriefcase,
 } from "react-icons/fi";
 
@@ -25,9 +24,6 @@ interface Job {
 }
 
 export default function FindJobsPage() {
-  const [mobileMenu, setMobileMenu] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -45,17 +41,6 @@ export default function FindJobsPage() {
 
     if (savedSkills) setSkills(JSON.parse(savedSkills));
     if (savedCV) setCvUploaded(true);
-
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    handleResize();
-
-    window.addEventListener("resize", handleResize);
-
-    return () =>
-      window.removeEventListener("resize", handleResize);
   }, []);
 
   const fetchJobs = async (cvOverride?: string) => {
@@ -81,9 +66,7 @@ export default function FindJobsPage() {
       const data = await res.json();
 
       setJobs(data);
-    } catch (err) {
-      console.log(err);
-    }
+    } catch {}
 
     setLoading(false);
   };
@@ -137,17 +120,27 @@ export default function FindJobsPage() {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-blue-100 to-green-100">
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-purple-300 via-blue-200 to-green-200">
+
+      {/* background glow */}
+
+      <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
+
+        <div className="absolute top-20 left-20 w-72 h-72 bg-purple-400 opacity-20 rounded-full blur-3xl"></div>
+
+        <div className="absolute bottom-20 right-20 w-72 h-72 bg-green-400 opacity-20 rounded-full blur-3xl"></div>
+
+      </div>
 
       {/* NAVBAR */}
 
-      <nav className="sticky top-0 z-50 backdrop-blur-xl bg-white/70 border-b border-gray-200">
+      <nav className="relative z-50 backdrop-blur-xl bg-white/60 border-b border-white/40 shadow-lg">
 
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between">
+        <div className="max-w-7xl mx-auto px-8 py-4 flex justify-between items-center">
 
-          <div className="flex items-center gap-2 font-bold text-xl">
+          <div className="flex items-center gap-3 font-bold text-xl">
 
-            <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-2 py-1 rounded">
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1 rounded-lg shadow">
 
               QA
 
@@ -157,11 +150,11 @@ export default function FindJobsPage() {
 
           </div>
 
-          <div className="hidden md:flex gap-6 items-center">
+          <div className="flex gap-6 items-center text-gray-700 font-medium">
 
             <Link
               href="/dashboard"
-              className="flex gap-2 items-center hover:text-green-600"
+              className="flex gap-2 items-center hover:text-green-600 transition"
             >
               <FiUser />
               Dashboard
@@ -177,7 +170,7 @@ export default function FindJobsPage() {
 
             <Link
               href="/notifications"
-              className="flex gap-2 items-center hover:text-green-600"
+              className="flex gap-2 items-center hover:text-green-600 transition"
             >
               <FiBell />
               Notifications
@@ -191,23 +184,23 @@ export default function FindJobsPage() {
 
       {/* HERO */}
 
-      <div className="text-center mt-16">
+      <div className="relative z-10 text-center mt-20">
 
-        <div className="inline-block p-6 bg-white shadow-xl rounded-3xl">
+        <div className="inline-block p-8 rounded-3xl bg-white/40 backdrop-blur-xl shadow-xl">
 
-          <FiBriefcase className="text-5xl text-green-500 mx-auto" />
+          <FiBriefcase className="text-5xl text-green-600 mx-auto" />
 
         </div>
 
-        <h1 className="text-5xl font-bold mt-6">
+        <h1 className="text-5xl font-bold mt-8 bg-gradient-to-r from-green-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
 
           Find Your Dream Job
 
         </h1>
 
-        <p className="text-gray-600 mt-3">
+        <p className="text-gray-700 mt-4 text-lg">
 
-          AI finds and matches jobs automatically
+          Let AI match the perfect job for you
 
         </p>
 
@@ -215,13 +208,13 @@ export default function FindJobsPage() {
 
       {/* CV */}
 
-      <div className="max-w-xl mx-auto mt-12 px-6">
+      <div className="relative z-10 max-w-xl mx-auto mt-14">
 
-        <label className="group cursor-pointer block">
+        <label className="block cursor-pointer group">
 
-          <div className="bg-white border-2 border-dashed border-green-300 rounded-3xl p-10 text-center hover:border-green-500 hover:shadow-xl transition">
+          <div className="bg-white/40 backdrop-blur-xl border border-white/40 rounded-3xl p-10 text-center shadow-xl hover:shadow-2xl hover:scale-[1.02] transition">
 
-            <FiUpload className="text-4xl text-green-500 mx-auto mb-3 group-hover:scale-110 transition" />
+            <FiUpload className="text-5xl text-green-500 mx-auto mb-4 group-hover:scale-110 transition" />
 
             <p className="font-semibold text-lg">
 
@@ -229,9 +222,9 @@ export default function FindJobsPage() {
 
             </p>
 
-            <p className="text-gray-500 text-sm">
+            <p className="text-gray-600 text-sm">
 
-              PDF, DOC, TXT
+              Drag and drop or click
 
             </p>
 
@@ -247,9 +240,9 @@ export default function FindJobsPage() {
 
         {cvUploaded && (
 
-          <div className="text-green-600 text-center mt-3 font-semibold">
+          <div className="text-green-600 text-center mt-4 font-semibold">
 
-            ✓ CV Uploaded
+            ✓ CV uploaded successfully
 
           </div>
 
@@ -259,59 +252,65 @@ export default function FindJobsPage() {
 
       {/* SKILLS */}
 
-      <div className="max-w-xl mx-auto mt-10 bg-white shadow-xl rounded-3xl p-6">
+      <div className="relative z-10 max-w-xl mx-auto mt-10">
 
-        <div className="flex gap-3">
+        <div className="bg-white/40 backdrop-blur-xl rounded-3xl shadow-xl p-6">
 
-          <input
-            value={skillInput}
-            onChange={(e) =>
-              setSkillInput(e.target.value)
-            }
-            placeholder="Add a skill..."
-            className="flex-1 border rounded-xl p-3 focus:ring-2 focus:ring-green-400 outline-none"
-          />
+          <div className="flex gap-3">
 
-          <button
-            onClick={addSkill}
-            className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-5 rounded-xl hover:scale-105 transition"
-          >
-            <FiPlus />
-          </button>
+            <input
+              value={skillInput}
+              onChange={(e) =>
+                setSkillInput(e.target.value)
+              }
+              placeholder="Add skill..."
+              className="flex-1 p-3 rounded-xl border border-white/40 focus:ring-2 focus:ring-green-400 outline-none bg-white/70"
+            />
 
-        </div>
-
-        <div className="flex flex-wrap gap-2 mt-4">
-
-          {skills.map((s) => (
-
-            <div
-              key={s}
-              className="bg-green-100 text-green-700 px-4 py-1 rounded-full flex items-center gap-2 hover:scale-105 transition"
+            <button
+              onClick={addSkill}
+              className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-5 rounded-xl hover:scale-110 transition shadow"
             >
 
-              {s}
+              <FiPlus />
 
-              <FiX
-                onClick={() => removeSkill(s)}
-                className="cursor-pointer"
-              />
+            </button>
 
-            </div>
+          </div>
 
-          ))}
+          <div className="flex flex-wrap gap-2 mt-4">
+
+            {skills.map((s) => (
+
+              <div
+                key={s}
+                className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-1 rounded-full flex items-center gap-2 shadow hover:scale-110 transition"
+              >
+
+                {s}
+
+                <FiX
+                  onClick={() => removeSkill(s)}
+                  className="cursor-pointer"
+                />
+
+              </div>
+
+            ))}
+
+          </div>
 
         </div>
 
       </div>
 
-      {/* SEARCH */}
+      {/* BUTTON */}
 
-      <div className="text-center mt-10">
+      <div className="relative z-10 text-center mt-10">
 
         <button
           onClick={() => fetchJobs()}
-          className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-10 py-4 rounded-2xl text-lg font-semibold shadow-lg hover:scale-110 hover:shadow-2xl transition"
+          className="bg-gradient-to-r from-green-500 via-blue-500 to-purple-500 text-white px-12 py-4 rounded-2xl font-bold text-lg shadow-xl hover:scale-110 transition"
         >
 
           Search Jobs
@@ -322,13 +321,13 @@ export default function FindJobsPage() {
 
       {/* RESULTS */}
 
-      <div className="max-w-7xl mx-auto mt-16 px-6 pb-20">
+      <div className="relative z-10 max-w-7xl mx-auto mt-16 pb-20">
 
         {loading && (
 
-          <div className="text-center text-xl font-semibold animate-pulse">
+          <div className="text-center text-xl font-semibold">
 
-            Finding best jobs for you...
+            Finding perfect jobs...
 
           </div>
 
@@ -340,7 +339,7 @@ export default function FindJobsPage() {
 
             <div
               key={i}
-              className="bg-white rounded-3xl shadow-xl p-6 hover:shadow-2xl hover:-translate-y-2 transition"
+              className="bg-white/50 backdrop-blur-xl rounded-3xl p-6 shadow-xl hover:shadow-2xl hover:scale-[1.03] transition"
             >
 
               <h2 className="font-bold text-xl">
@@ -349,13 +348,13 @@ export default function FindJobsPage() {
 
               </h2>
 
-              <p className="text-gray-600 mt-1">
+              <p className="text-gray-600">
 
                 {job.company}
 
               </p>
 
-              <div className="flex gap-2 mt-2 text-gray-500 text-sm">
+              <div className="flex gap-2 mt-2 text-gray-600 text-sm">
 
                 <FiMapPin />
 
@@ -363,15 +362,13 @@ export default function FindJobsPage() {
 
               </div>
 
-              {/* MATCH */}
-
               <div className="mt-4">
 
                 <div className="flex justify-between text-sm">
 
                   <span>Match</span>
 
-                  <span className="font-semibold text-green-600">
+                  <span className="font-bold text-green-600">
 
                     {job.match}%
 
@@ -379,10 +376,10 @@ export default function FindJobsPage() {
 
                 </div>
 
-                <div className="bg-gray-200 rounded-full h-3 mt-1 overflow-hidden">
+                <div className="bg-gray-200 rounded-full h-3 mt-1">
 
                   <div
-                    className="bg-gradient-to-r from-green-400 to-emerald-600 h-3 rounded-full transition-all duration-1000"
+                    className="bg-gradient-to-r from-green-400 via-blue-500 to-purple-500 h-3 rounded-full transition-all duration-1000"
                     style={{
                       width: `${job.match}%`,
                     }}
@@ -396,7 +393,7 @@ export default function FindJobsPage() {
                 onClick={() =>
                   window.open(job.link)
                 }
-                className="mt-6 w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 rounded-xl font-semibold hover:scale-105 transition"
+                className="mt-6 w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 rounded-xl font-semibold hover:scale-105 transition shadow"
               >
 
                 Apply Now
