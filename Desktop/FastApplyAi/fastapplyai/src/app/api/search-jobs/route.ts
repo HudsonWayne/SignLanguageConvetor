@@ -181,7 +181,7 @@ export async function POST(req: Request) {
       const bRemote = b.remote ? 1 : 0;
       if (aRemote !== bRemote) return aRemote - bRemote;
       return (b.match || 0) - (a.match || 0);
-    }));
+    });
 
     /* ================= AUTO-APPLY LOGIC ================= */
     for (const job of jobs) {
