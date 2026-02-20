@@ -1,229 +1,783 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+
+import {
+  FiUpload,
+  FiSearch,
+  FiMapPin,
+  FiX,
+  FiPlus,
+  FiUser,
+  FiBell,
+  FiBriefcase,
+} from "react-icons/fi";
+
+
+/* ================= TYPES ================= */
 
 interface Job {
-  id: string;
+
   title: string;
+
   company: string;
+
+  description: string;
+
   location: string;
-  match: number;
-  applyUrl: string;
+
+  link: string;
+
+  source: string;
+
+  match?: number;
+
+  applyType?: "email" | "external" | "manual";
+
 }
 
+
+/* ================= PAGE ================= */
+
 export default function Page() {
+
+
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [skills, setSkills] = useState<string[]>([]);
-  const [input, setInput] = useState("");
-  const [cvText, setCvText] = useState("");
+
   const [loading, setLoading] = useState(false);
 
-  /* LOAD SKILLS */
-  useEffect(() => {
-    const saved = localStorage.getItem("skills");
+  const [skills, setSkills] = useState<string[]>([]);
 
-    if (saved) setSkills(JSON.parse(saved));
+  const [skillInput, setSkillInput] = useState("");
+
+  const [mounted, setMounted] = useState(false);
+
+  const [cvUploaded, setCvUploaded] = useState(false);
+
+
+  /* ================= LOAD LOCAL DATA ================= */
+
+  useEffect(() => {
+
+    setMounted(true);
+
+    const savedSkills = localStorage.getItem("skills");
+
+    const savedCV = localStorage.getItem("cvText");
+
+
+    if (savedSkills) setSkills(JSON.parse(savedSkills));
+
+    if (savedCV) setCvUploaded(true);
+
   }, []);
 
-  /* SAVE SKILLS */
-  useEffect(() => {
-    localStorage.setItem("skills", JSON.stringify(skills));
-  }, [skills]);
 
-  /* ADD SKILL */
-  function addSkill() {
-    if (!input) return;
+  /* ================= FETCH JOBS ================= */
 
-    if (!skills.includes(input)) {
-      setSkills([...skills, input]);
+  const fetchJobs = async (cvOverride?: string) => {
+
+
+    setLoading(true);
+
+
+    const cvText =
+
+      cvOverride ||
+
+      localStorage.getItem("cvText") ||
+
+      "";
+
+
+    try {
+
+      const res = await fetch("/api/search-jobs", {
+
+        method: "POST",
+
+        headers: {
+
+          "Content-Type": "application/json",
+
+        },
+
+        body: JSON.stringify({
+
+          cvText,
+
+          keywords: skills,
+
+          user: {
+
+            name: "Candidate",
+
+            email: "candidate@email.com",
+
+          },
+
+        }),
+
+      });
+
+
+      const data = await res.json();
+
+
+      /* FILTER ONLY RELEVANT JOBS */
+
+      const filtered = data.filter(
+
+        (job: Job) => (job.match || 0) >= 30
+
+      );
+
+
+      setJobs(filtered);
+
     }
 
-    setInput("");
-  }
+    catch (e) {
 
-  /* REMOVE SKILL */
-  function removeSkill(skill: string) {
-    setSkills(skills.filter((s) => s !== skill));
-  }
+      console.log(e);
 
-  /* UPLOAD CV */
-  async function uploadCV(e: any) {
-    const file = e.target.files[0];
+    }
+
+
+    setLoading(false);
+
+  };
+
+
+  /* ================= APPLY ================= */
+
+  const applyJob = async (job: Job) => {
+
+
+    try {
+
+      const res = await fetch("/api/apply-job", {
+
+        method: "POST",
+
+        headers: {
+
+          "Content-Type": "application/json",
+
+        },
+
+        body: JSON.stringify({
+
+          job,
+
+          user: {
+
+            name: "Candidate",
+
+            email: "candidate@email.com",
+
+          },
+
+        }),
+
+      });
+
+
+      const data = await res.json();
+
+
+      if (data.redirect) {
+
+        window.open(data.redirect, "_blank");
+
+      }
+
+      else {
+
+        alert("Application saved");
+
+      }
+
+    }
+
+    catch {
+
+      window.open(job.link, "_blank");
+
+    }
+
+  };
+
+
+  /* ================= CV UPLOAD ================= */
+
+  const handleCVUpload = async (e: any) => {
+
+
+    const file = e.target.files?.[0];
 
     if (!file) return;
 
+
     const text = await file.text();
 
-    setCvText(text);
 
     localStorage.setItem("cvText", text);
-  }
 
-  /* SEARCH JOBS */
-  async function searchJobs() {
-    setLoading(true);
 
-    const res = await fetch("/api/search-jobs", {
-      method: "POST",
+    setCvUploaded(true);
 
-      headers: {
-        "Content-Type": "application/json",
-      },
 
-      body: JSON.stringify({
-        cvText,
-        skills,
-        user: {
-          name: "User",
-          email: "user@email.com",
-        },
-      }),
-    });
+    fetchJobs(text);
 
-    const data = await res.json();
+  };
 
-    setJobs(data.jobs || []);
 
-    setLoading(false);
-  }
+  /* ================= ADD SKILL ================= */
 
-  /* APPLY */
-  async function apply(job: Job) {
-    const res = await fetch("/api/apply-job", {
-      method: "POST",
+  const addSkill = () => {
 
-      headers: {
-        "Content-Type": "application/json",
-      },
 
-      body: JSON.stringify({
-        job,
-        user: {
-          name: "User",
-          email: "user@email.com",
-        },
-      }),
-    });
+    const s = skillInput.trim();
 
-    const data = await res.json();
+    if (!s || skills.includes(s)) return;
 
-    if (data.redirect) {
-      window.open(data.redirect);
-    }
-  }
+
+    const updated = [...skills, s];
+
+
+    setSkills(updated);
+
+
+    localStorage.setItem(
+
+      "skills",
+
+      JSON.stringify(updated)
+
+    );
+
+
+    setSkillInput("");
+
+  };
+
+
+  /* ================= REMOVE SKILL ================= */
+
+  const removeSkill = (s: string) => {
+
+
+    const updated = skills.filter(
+
+      (k) => k !== s
+
+    );
+
+
+    setSkills(updated);
+
+
+    localStorage.setItem(
+
+      "skills",
+
+      JSON.stringify(updated)
+
+    );
+
+  };
+
+
+  useEffect(() => {
+
+    if (mounted) fetchJobs();
+
+  }, [mounted]);
+
+
+  if (!mounted) return null;
+
+
+
+/* ================= UI ================= */
 
   return (
-    <div className="p-10">
 
-      <h1 className="text-4xl font-bold mb-5">
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-purple-300 via-blue-200 to-green-200">
 
-        Find Jobs
 
-      </h1>
 
-      {/* CV */}
+      {/* Glow */}
 
-      <input type="file" onChange={uploadCV} />
 
-      {/* SKILLS */}
+      <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
 
-      <div className="mt-5">
 
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Add skill"
-          className="border p-2"
-        />
+        <div className="absolute top-20 left-20 w-72 h-72 bg-purple-400 opacity-20 rounded-full blur-3xl"></div>
 
-        <button
-          onClick={addSkill}
-          className="bg-green-500 text-white px-4 py-2 ml-2"
-        >
-          Add
-        </button>
+
+        <div className="absolute bottom-20 right-20 w-72 h-72 bg-green-400 opacity-20 rounded-full blur-3xl"></div>
+
 
       </div>
 
-      {/* SKILLS LIST */}
 
-      <div className="mt-3">
 
-        {skills.map((skill) => (
+{/* NAVBAR */}
 
-          <span
-            key={skill}
-            className="bg-blue-500 text-white px-3 py-1 mr-2 cursor-pointer"
-            onClick={() => removeSkill(skill)}
-          >
 
-            {skill}
+<nav className="relative z-50 backdrop-blur-xl bg-white/60 border-b border-white/40 shadow-lg">
 
-          </span>
 
-        ))}
+<div className="max-w-7xl mx-auto px-8 py-4 flex justify-between items-center">
 
-      </div>
 
-      {/* SEARCH */}
+<div className="flex items-center gap-3 font-bold text-xl">
 
-      <button
-        onClick={searchJobs}
-        className="bg-purple-600 text-white px-6 py-3 mt-5"
-      >
 
-        Search Jobs
+<div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1 rounded-lg shadow">
 
-      </button>
 
-      {/* LOADING */}
+QA
 
-      {loading && <p>Loading jobs...</p>}
 
-      {/* JOBS */}
+</div>
 
-      <div className="mt-10">
 
-        {jobs.map((job) => (
+QuickApplyAI
 
-          <div
-            key={job.id}
-            className="border p-5 mb-5"
-          >
 
-            <h2 className="text-xl font-bold">
+</div>
 
-              {job.title}
 
-            </h2>
 
-            <p>
+<div className="flex gap-6 items-center text-gray-700 font-medium">
 
-              {job.location}
 
-            </p>
+<Link href="/dashboard">
 
-            <p>
 
-              Match: {job.match}%
+<div className="flex gap-2 items-center hover:text-green-600 transition">
 
-            </p>
 
-            <button
-              onClick={() => apply(job)}
-              className="bg-green-600 text-white px-5 py-2 mt-3"
-            >
+<FiUser/> Dashboard
 
-              Apply
 
-            </button>
+</div>
 
-          </div>
 
-        ))}
+</Link>
 
-      </div>
 
-    </div>
+
+<Link href="/find-jobs">
+
+
+<div className="flex gap-2 items-center text-green-600 font-semibold">
+
+
+<FiSearch/> Find Jobs
+
+
+</div>
+
+
+</Link>
+
+
+
+<Link href="/notifications">
+
+
+<div className="flex gap-2 items-center hover:text-green-600 transition">
+
+
+<FiBell/> Notifications
+
+
+</div>
+
+
+</Link>
+
+
+</div>
+
+
+</div>
+
+
+</nav>
+
+
+
+{/* HERO */}
+
+
+<div className="relative z-10 text-center mt-20">
+
+
+<div className="inline-block p-8 rounded-3xl bg-white/40 backdrop-blur-xl shadow-xl">
+
+
+<FiBriefcase className="text-5xl text-green-600 mx-auto"/>
+
+
+</div>
+
+
+
+<h1 className="text-5xl font-bold mt-8 bg-gradient-to-r from-green-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
+
+
+Find Your Dream Job
+
+
+</h1>
+
+
+
+<p className="text-gray-700 mt-4 text-lg">
+
+
+Let AI match the perfect job for you
+
+
+</p>
+
+
+</div>
+
+
+
+{/* CV UPLOAD */}
+
+
+<div className="relative z-10 max-w-xl mx-auto mt-14">
+
+
+<label className="block cursor-pointer group">
+
+
+<div className="bg-white/40 backdrop-blur-xl border border-white/40 rounded-3xl p-10 text-center shadow-xl hover:shadow-2xl hover:scale-[1.02] transition">
+
+
+<FiUpload className="text-5xl text-green-500 mx-auto mb-4 group-hover:scale-110 transition"/>
+
+
+
+<p className="font-semibold text-lg">
+
+
+Upload your CV
+
+
+</p>
+
+
+
+<p className="text-gray-600 text-sm">
+
+
+Drag and drop or click
+
+
+</p>
+
+
+</div>
+
+
+
+<input
+
+type="file"
+
+className="hidden"
+
+onChange={handleCVUpload}
+
+/>
+
+
+</label>
+
+
+
+{cvUploaded && (
+
+
+<div className="text-green-600 text-center mt-4 font-semibold">
+
+
+✓ CV uploaded successfully
+
+
+</div>
+
+
+)}
+
+
+</div>
+
+
+
+{/* SKILLS */}
+
+
+<div className="relative z-10 max-w-xl mx-auto mt-10">
+
+
+<div className="bg-white/40 backdrop-blur-xl rounded-3xl shadow-xl p-6">
+
+
+<div className="flex gap-3">
+
+
+<input
+
+value={skillInput}
+
+onChange={(e)=>setSkillInput(e.target.value)}
+
+placeholder="Add skill..."
+
+className="flex-1 p-3 rounded-xl border border-white/40 focus:ring-2 focus:ring-green-400 outline-none bg-white/70"
+
+/>
+
+
+
+<button
+
+onClick={addSkill}
+
+className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-5 rounded-xl hover:scale-110 transition shadow"
+
+>
+
+
+<FiPlus/>
+
+
+</button>
+
+
+</div>
+
+
+
+<div className="flex flex-wrap gap-2 mt-4">
+
+
+{skills.map((s)=>(
+
+
+<div
+
+key={s}
+
+className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-1 rounded-full flex items-center gap-2 shadow hover:scale-110 transition"
+
+>
+
+
+{s}
+
+
+<FiX
+
+onClick={()=>removeSkill(s)}
+
+className="cursor-pointer"
+
+/>
+
+
+</div>
+
+
+))}
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+{/* BUTTON */}
+
+
+<div className="relative z-10 text-center mt-10">
+
+
+<button
+
+onClick={()=>fetchJobs()}
+
+className="bg-gradient-to-r from-green-500 via-blue-500 to-purple-500 text-white px-12 py-4 rounded-2xl font-bold text-lg shadow-xl hover:scale-110 transition"
+
+>
+
+
+Search Jobs
+
+
+</button>
+
+
+</div>
+
+
+
+{/* RESULTS */}
+
+
+<div className="relative z-10 max-w-7xl mx-auto mt-16 pb-20">
+
+
+{loading && (
+
+<div className="text-center text-xl font-semibold">
+
+
+Finding perfect jobs...
+
+
+</div>
+
+)}
+
+
+
+<div className="grid md:grid-cols-3 gap-8">
+
+
+{jobs.map((job,i)=>(
+
+
+<div
+
+key={i}
+
+className="bg-white/50 backdrop-blur-xl rounded-3xl p-6 shadow-xl hover:shadow-2xl hover:scale-[1.03] transition"
+
+>
+
+
+<h2 className="font-bold text-xl">
+
+
+{job.title}
+
+
+</h2>
+
+
+
+<p className="text-gray-600">
+
+
+{job.company}
+
+
+</p>
+
+
+
+<div className="flex gap-2 mt-2 text-gray-600 text-sm">
+
+
+<FiMapPin/>
+
+
+{job.location}
+
+
+</div>
+
+
+
+<div className="mt-4">
+
+
+<div className="flex justify-between text-sm">
+
+
+<span>Match</span>
+
+
+<span className="font-bold text-green-600">
+
+
+{job.match}%
+
+
+</span>
+
+
+</div>
+
+
+
+<div className="bg-gray-200 rounded-full h-3 mt-1">
+
+
+<div
+
+className="bg-gradient-to-r from-green-400 via-blue-500 to-purple-500 h-3 rounded-full"
+
+style={{width:`${job.match}%`}}
+
+/>
+
+
+</div>
+
+
+</div>
+
+
+
+<button
+
+onClick={()=>applyJob(job)}
+
+className="mt-6 w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 rounded-xl font-semibold hover:scale-105 transition shadow"
+
+>
+
+
+Apply Now
+
+
+</button>
+
+
+
+</div>
+
+
+))}
+
+
+</div>
+
+
+</div>
+
+
+
+</div>
+
   );
+
 }
