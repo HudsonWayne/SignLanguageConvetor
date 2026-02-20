@@ -23,19 +23,24 @@ export default function FindJobsPage() {
   const [skillInput, setSkillInput] = useState("");
   const [mounted, setMounted] = useState(false);
 
-  /* ================= LOAD SKILLS ================= */
+  /* ================= LOAD LOCAL DATA ================= */
   useEffect(() => {
     setMounted(true);
     const savedSkills = localStorage.getItem("skills");
     if (savedSkills) setSkills(JSON.parse(savedSkills));
   }, []);
 
-  /* ================= FETCH JOBS FROM ROUTE ================= */
+  /* ================= FETCH JOBS ================= */
   const fetchJobs = async () => {
-    const cvText = localStorage.getItem("cvText") || "";
-    if (!cvText) return;
-
     setLoading(true);
+    const cvText = localStorage.getItem("cvText") || "";
+
+    if (!cvText) {
+      alert("CV not found in local storage. Please upload your CV first.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch("/api/search-jobs", {
         method: "POST",
@@ -44,18 +49,21 @@ export default function FindJobsPage() {
       });
 
       const data: Job[] = await res.json();
-
-      // Only show jobs with match >= 30%
       setJobs(data.filter((job) => (job.match || 0) >= 30));
-    } catch (err) {
-      console.error("Failed to fetch jobs:", err);
-      setJobs([]);
-    } finally {
-      setLoading(false);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to fetch jobs. Check the server console.");
     }
+
+    setLoading(false);
   };
 
-  /* ================= ADD / REMOVE SKILLS ================= */
+  /* ================= APPLY ================= */
+  const applyJob = (job: Job) => {
+    window.open(job.link, "_blank");
+  };
+
+  /* ================= ADD SKILL ================= */
   const addSkill = () => {
     const s = skillInput.trim();
     if (!s || skills.includes(s)) return;
@@ -63,18 +71,14 @@ export default function FindJobsPage() {
     setSkills(updated);
     localStorage.setItem("skills", JSON.stringify(updated));
     setSkillInput("");
-    fetchJobs();
   };
 
+  /* ================= REMOVE SKILL ================= */
   const removeSkill = (s: string) => {
     const updated = skills.filter((k) => k !== s);
     setSkills(updated);
     localStorage.setItem("skills", JSON.stringify(updated));
-    fetchJobs();
   };
-
-  /* ================= APPLY JOB ================= */
-  const applyJob = (job: Job) => window.open(job.link, "_blank");
 
   /* ================= FETCH JOBS AFTER MOUNT ================= */
   useEffect(() => {
@@ -165,7 +169,7 @@ export default function FindJobsPage() {
         </div>
       </div>
 
-      {/* REFRESH BUTTON */}
+      {/* SEARCH BUTTON */}
       <div className="relative z-10 text-center mt-10">
         <button
           onClick={fetchJobs}
@@ -175,10 +179,18 @@ export default function FindJobsPage() {
         </button>
       </div>
 
-      {/* JOB RESULTS */}
+      {/* RESULTS */}
       <div className="relative z-10 max-w-7xl mx-auto mt-16 pb-20">
-        {loading && <div className="text-center text-xl font-semibold">Finding perfect jobs...</div>}
-        {!loading && jobs.length === 0 && <div className="text-center text-lg text-gray-600">No jobs found</div>}
+        {loading && (
+          <div className="text-center text-xl font-semibold">
+            Finding perfect jobs...
+          </div>
+        )}
+        {!loading && jobs.length === 0 && (
+          <div className="text-center text-xl font-semibold text-gray-600">
+            No jobs found
+          </div>
+        )}
 
         <div className="grid md:grid-cols-3 gap-8">
           {jobs.map((job, i) => (
