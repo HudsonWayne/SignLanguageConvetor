@@ -23,18 +23,19 @@ export default function FindJobsPage() {
   const [skillInput, setSkillInput] = useState("");
   const [mounted, setMounted] = useState(false);
 
-  /* ================= LOAD LOCAL DATA ================= */
+  /* ================= LOAD SKILLS ================= */
   useEffect(() => {
     setMounted(true);
     const savedSkills = localStorage.getItem("skills");
     if (savedSkills) setSkills(JSON.parse(savedSkills));
   }, []);
 
-  /* ================= FETCH JOBS ================= */
+  /* ================= FETCH JOBS FROM ROUTE ================= */
   const fetchJobs = async () => {
-    setLoading(true);
     const cvText = localStorage.getItem("cvText") || "";
+    if (!cvText) return;
 
+    setLoading(true);
     try {
       const res = await fetch("/api/search-jobs", {
         method: "POST",
@@ -43,20 +44,18 @@ export default function FindJobsPage() {
       });
 
       const data: Job[] = await res.json();
+
+      // Only show jobs with match >= 30%
       setJobs(data.filter((job) => (job.match || 0) >= 30));
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      console.error("Failed to fetch jobs:", err);
+      setJobs([]);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
-  /* ================= APPLY ================= */
-  const applyJob = (job: Job) => {
-    window.open(job.link, "_blank");
-  };
-
-  /* ================= ADD SKILL ================= */
+  /* ================= ADD / REMOVE SKILLS ================= */
   const addSkill = () => {
     const s = skillInput.trim();
     if (!s || skills.includes(s)) return;
@@ -64,21 +63,30 @@ export default function FindJobsPage() {
     setSkills(updated);
     localStorage.setItem("skills", JSON.stringify(updated));
     setSkillInput("");
+    fetchJobs();
   };
 
-  /* ================= REMOVE SKILL ================= */
   const removeSkill = (s: string) => {
     const updated = skills.filter((k) => k !== s);
     setSkills(updated);
     localStorage.setItem("skills", JSON.stringify(updated));
+    fetchJobs();
   };
+
+  /* ================= APPLY JOB ================= */
+  const applyJob = (job: Job) => window.open(job.link, "_blank");
 
   /* ================= FETCH JOBS AFTER MOUNT ================= */
   useEffect(() => {
     if (mounted) fetchJobs();
   }, [mounted]);
 
-  if (!mounted) return <div className="flex items-center justify-center min-h-screen text-gray-700 text-xl">Loading jobs...</div>;
+  if (!mounted)
+    return (
+      <div className="flex items-center justify-center min-h-screen text-gray-700 text-xl">
+        Loading jobs...
+      </div>
+    );
 
   /* ================= UI ================= */
   return (
@@ -157,7 +165,7 @@ export default function FindJobsPage() {
         </div>
       </div>
 
-      {/* SEARCH BUTTON */}
+      {/* REFRESH BUTTON */}
       <div className="relative z-10 text-center mt-10">
         <button
           onClick={fetchJobs}
@@ -167,9 +175,11 @@ export default function FindJobsPage() {
         </button>
       </div>
 
-      {/* RESULTS */}
+      {/* JOB RESULTS */}
       <div className="relative z-10 max-w-7xl mx-auto mt-16 pb-20">
         {loading && <div className="text-center text-xl font-semibold">Finding perfect jobs...</div>}
+        {!loading && jobs.length === 0 && <div className="text-center text-lg text-gray-600">No jobs found</div>}
+
         <div className="grid md:grid-cols-3 gap-8">
           {jobs.map((job, i) => (
             <div key={i} className="bg-white/50 backdrop-blur-xl rounded-3xl p-6 shadow-xl hover:shadow-2xl hover:scale-[1.03] transition">
