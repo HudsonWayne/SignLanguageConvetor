@@ -26,16 +26,21 @@ export default function FindJobsPage() {
   const [skills, setSkills] = useState<string[]>([]);
   const [skillInput, setSkillInput] = useState("");
 
-  /* ================= LOAD SKILLS ================= */
+  /* ================= LOAD SKILLS PROPERLY ================= */
   useEffect(() => {
     const savedSkills = localStorage.getItem("skills");
-    if (savedSkills) setSkills(JSON.parse(savedSkills));
 
-    fetchJobs();
+    if (savedSkills) {
+      const parsed = JSON.parse(savedSkills);
+      setSkills(parsed);
+      fetchJobs(parsed); // fetch AFTER loading skills
+    } else {
+      fetchJobs([]); // fetch without filters
+    }
   }, []);
 
   /* ================= FETCH JOBS ================= */
-  const fetchJobs = async () => {
+  const fetchJobs = async (skillList: string[] = skills) => {
     setLoading(true);
 
     try {
@@ -43,15 +48,15 @@ export default function FindJobsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          cvText: "", // no CV required
-          keywords: skills,
+          keywords: skillList,
         }),
       });
 
       const data: Job[] = await res.json();
       setJobs(data);
     } catch (err) {
-      console.error(err);
+      console.error("Fetch error:", err);
+      setJobs([]);
     }
 
     setLoading(false);
@@ -62,7 +67,7 @@ export default function FindJobsPage() {
     window.open(job.link, "_blank");
   };
 
-  /* ================= SKILLS ================= */
+  /* ================= ADD SKILL ================= */
   const addSkill = () => {
     const s = skillInput.trim().toLowerCase();
     if (!s || skills.includes(s)) return;
@@ -73,6 +78,7 @@ export default function FindJobsPage() {
     setSkillInput("");
   };
 
+  /* ================= REMOVE SKILL ================= */
   const removeSkill = (s: string) => {
     const updated = skills.filter((k) => k !== s);
     setSkills(updated);
@@ -83,7 +89,7 @@ export default function FindJobsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-blue-100 to-emerald-100">
 
-      {/* ================= NAVBAR ================= */}
+      {/* NAVBAR */}
       <nav className="bg-white/70 backdrop-blur-xl shadow-md sticky top-0 z-50 border-b border-white/40">
         <div className="max-w-7xl mx-auto px-8 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3 font-bold text-xl">
@@ -107,7 +113,7 @@ export default function FindJobsPage() {
         </div>
       </nav>
 
-      {/* ================= HERO ================= */}
+      {/* HERO */}
       <div className="text-center mt-20">
         <div className="inline-block p-6 rounded-3xl bg-white/60 backdrop-blur-xl shadow-lg">
           <FiBriefcase className="text-5xl text-emerald-600" />
@@ -122,7 +128,7 @@ export default function FindJobsPage() {
         </p>
       </div>
 
-      {/* ================= SKILL FILTER ================= */}
+      {/* SKILL FILTER */}
       <div className="max-w-xl mx-auto mt-12 bg-white/60 backdrop-blur-xl rounded-3xl shadow-xl p-8">
         <div className="flex gap-3">
           <input
@@ -156,7 +162,7 @@ export default function FindJobsPage() {
 
         <div className="text-center mt-6">
           <button
-            onClick={fetchJobs}
+            onClick={() => fetchJobs()}
             className="bg-gradient-to-r from-indigo-500 to-blue-600 text-white px-10 py-3 rounded-2xl font-semibold shadow-lg hover:scale-105 transition"
           >
             <FiSearch className="inline mr-2" />
@@ -165,7 +171,7 @@ export default function FindJobsPage() {
         </div>
       </div>
 
-      {/* ================= RESULTS ================= */}
+      {/* RESULTS */}
       <div className="max-w-7xl mx-auto mt-16 pb-24 px-6 grid md:grid-cols-3 gap-10">
 
         {loading && (
@@ -197,7 +203,7 @@ export default function FindJobsPage() {
                 {job.description}
               </p>
 
-              {job.match && (
+              {job.match !== undefined && (
                 <div className="mt-4 text-sm font-semibold text-emerald-600">
                   Match: {job.match}%
                 </div>
@@ -214,3 +220,4 @@ export default function FindJobsPage() {
       </div>
     </div>
   );
+}
