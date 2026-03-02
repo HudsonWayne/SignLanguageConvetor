@@ -1,9 +1,6 @@
-// src/app/api/search-jobs/route.ts
-
 import { NextResponse } from "next/server";
 import * as cheerio from "cheerio";
 
-/* ================= TYPES ================= */
 interface Job {
   title: string;
   company: string;
@@ -14,7 +11,7 @@ interface Job {
   match?: number;
 }
 
-/* ================= SKILL MATCH ================= */
+/* ================= MATCH SCORE ================= */
 function matchScore(text: string, keywords: string[]): number {
   if (!keywords || keywords.length === 0) return 50;
 
@@ -33,16 +30,22 @@ async function scrapeVacancyMail(): Promise<Job[]> {
   const jobs: Job[] = [];
 
   try {
-    const res = await fetch("https://vacancymail.co.zw/jobs/");
+    const res = await fetch("https://vacancymail.co.zw/jobs/", {
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+      },
+      cache: "no-store",
+    });
+
     const html = await res.text();
     const $ = cheerio.load(html);
 
-    $(".entry-title a").each((_, el) => {
-      const title = $(el).text().trim();
+    $(".job-listing").each((_, el) => {
+      const title = $(el).find("h3").text().trim();
       const link = $(el).attr("href") || "";
 
       jobs.push({
-        title,
+        title: title || "Job Opportunity",
         company: "Zimbabwe Employer",
         location: "Zimbabwe",
         description: "Click apply to view full job details.",
@@ -51,6 +54,7 @@ async function scrapeVacancyMail(): Promise<Job[]> {
       });
     });
 
+    console.log("Scraped jobs:", jobs.length);
   } catch (err) {
     console.error("Scraping error:", err);
   }
@@ -58,7 +62,7 @@ async function scrapeVacancyMail(): Promise<Job[]> {
   return jobs;
 }
 
-/* ================= MAIN API ================= */
+/* ================= API ================= */
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -66,13 +70,11 @@ export async function POST(req: Request) {
 
     let jobs = await scrapeVacancyMail();
 
-    // add match score
     jobs = jobs.map((job) => ({
       ...job,
       match: matchScore(job.title + job.description, keywords),
     }));
 
-    // sort by match
     jobs.sort((a, b) => (b.match || 0) - (a.match || 0));
 
     return NextResponse.json(jobs.slice(0, 30));
