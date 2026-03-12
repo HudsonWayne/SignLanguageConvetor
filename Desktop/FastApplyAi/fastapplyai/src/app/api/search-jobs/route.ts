@@ -32,7 +32,8 @@ async function scrapeVacancyMail(): Promise<Job[]> {
   try {
     const res = await fetch("https://vacancymail.co.zw/jobs/", {
       headers: {
-        "User-Agent": "Mozilla/5.0",
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
       },
       cache: "no-store",
     });
@@ -40,23 +41,26 @@ async function scrapeVacancyMail(): Promise<Job[]> {
     const html = await res.text();
     const $ = cheerio.load(html);
 
-    $(".job-listing").each((_, el) => {
-      const title = $(el).find("h3").text().trim();
-      const link = $(el).attr("href") || "";
+    $(".row.job-item").each((_, el) => {
+      const title = $(el).find("h3 a").text().trim();
+      const link = $(el).find("h3 a").attr("href") || "";
+      const location = $(el).find(".job-location").text().trim();
 
       jobs.push({
         title: title || "Job Opportunity",
         company: "Zimbabwe Employer",
-        location: "Zimbabwe",
+        location: location || "Zimbabwe",
         description: "Click apply to view full job details.",
-        link,
+        link: link.startsWith("http")
+          ? link
+          : `https://vacancymail.co.zw${link}`,
         source: "VacancyMail",
       });
     });
 
-    console.log("Scraped jobs:", jobs.length);
+    console.log("VacancyMail jobs:", jobs.length);
   } catch (err) {
-    console.error("Scraping error:", err);
+    console.error("VacancyMail scrape error:", err);
   }
 
   return jobs;
