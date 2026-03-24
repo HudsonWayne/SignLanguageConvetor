@@ -4,4 +4,4 @@ from .models import Person
 # Register your models here.
 
 class PersonAdmin(admin.ModelAdmin):
-    list display = " all "
+    list_display = "_all_"
