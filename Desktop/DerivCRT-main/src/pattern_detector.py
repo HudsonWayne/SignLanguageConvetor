@@ -1,205 +1,156 @@
-import asyncio
-import datetime
-import websockets
-import json
+class CRTStrategy:
+    """
+    CONFIRMATION LAYER ONLY
 
-APP_ID = 80707
-SYMBOLS = ["R_10", "R_25", "R_50", "R_75", "R_100"]
-URL = f"wss://ws.binaryws.com/websockets/v3?app_id={APP_ID}"
+    This module does NOT:
+    - create trades
+    - calculate SL/TP
+    - decide direction
 
-GRANULARITIES = {
-    "1h": 3600,
-    "30m": 1800,
-}
+    It ONLY answers:
+    → "Is this setup high probability?"
+    """
 
-RISK_REWARD = 3
+    def __init__(self, candles):
+        self.candles = candles
 
-# ----------------------------
-# STORAGE
-# ----------------------------
-data = {
-    symbol: {
-        tf: {
-            "start": None,
-            "open": None,
-            "high": None,
-            "low": None,
-            "close": None,
-            "history": [],
-            "closed": False
-        }
-        for tf in GRANULARITIES
-    }
-    for symbol in SYMBOLS
-}
+    # ----------------------------
+    # SAFETY CHECK
+    # ----------------------------
+    def ready(self):
+        return len(self.candles) >= 20
 
+    # ----------------------------
+    # STRUCTURE / TREND STRENGTH
+    # (proxy for trendlines 30M / 1H)
+    # ----------------------------
+    def structure_score(self):
+        if not self.ready():
+            return 0
 
-# ----------------------------
-# TIMEFRAME ALIGNMENT
-# ----------------------------
-def get_candle_time(epoch, tf_seconds):
-    return epoch - (epoch % tf_seconds)
+        highs = [c["high"] for c in self.candles[-20:]]
+        lows = [c["low"] for c in self.candles[-20:]]
 
+        # swing consistency (trendline approximation)
+        higher_highs = sum(1 for i in range(1, len(highs)) if highs[i] > highs[i - 1])
+        higher_lows = sum(1 for i in range(1, len(lows)) if lows[i] > lows[i - 1])
 
-# ----------------------------
-# UPDATE CANDLES
-# ----------------------------
-def update(symbol, epoch, price, tf):
-    tf_seconds = GRANULARITIES[tf]
-    start = get_candle_time(epoch, tf_seconds)
+        lower_highs = sum(1 for i in range(1, len(highs)) if highs[i] < highs[i - 1])
+        lower_lows = sum(1 for i in range(1, len(lows)) if lows[i] < lows[i - 1])
 
-    c = data[symbol][tf]
+        bullish_strength = (higher_highs + higher_lows) / 38
+        bearish_strength = (lower_highs + lower_lows) / 38
 
-    if c["start"] != start:
-        if c["open"] is not None:
-            c["history"].append({
-                "open": c["open"],
-                "high": c["high"],
-                "low": c["low"],
-                "close": c["close"]
-            })
-            if len(c["history"]) > 50:
-                c["history"].pop(0)
+        return max(bullish_strength, bearish_strength)
 
-        c.update({
-            "start": start,
-            "open": price,
-            "high": price,
-            "low": price,
-            "close": price,
-            "closed": True
-        })
-    else:
-        c["high"] = max(c["high"], price)
-        c["low"] = min(c["low"], price)
-        c["close"] = price
+    # ----------------------------
+    # MOMENTUM / ENTRY QUALITY
+    # ----------------------------
+    def momentum_quality(self):
+        if len(self.candles) < 2:
+            return 0
 
+        c = self.candles[-1]
 
-# ----------------------------
-# MARKET STRUCTURE (TREND)
-# ----------------------------
-def get_bias(history):
-    if len(history) < 10:
-        return None
+        body = abs(c["close"] - c["open"])
+        rng = c["high"] - c["low"]
 
-    highs = [c["high"] for c in history[-10:]]
-    lows = [c["low"] for c in history[-10:]]
+        if rng == 0:
+            return 0
 
-    hh = all(highs[i] >= highs[i-1] for i in range(1, len(highs)))
-    ll = all(lows[i] >= lows[i-1] for i in range(1, len(lows)))
+        return body / rng  # 0 → 1
 
-    lh = all(highs[i] <= highs[i-1] for i in range(1, len(highs)))
-    hl = all(lows[i] <= lows[i-1] for i in range(1, len(lows)))
+    # ----------------------------
+    # ORDER BLOCK VALIDATION (LIGHTWEIGHT)
+    # ----------------------------
+    def ob_quality(self):
+        if len(self.candles) < 5:
+            return 0
 
-    if hh and hl:
-        return "buy"
-    if lh and ll:
-        return "sell"
-    return None
+        # last impulse candle check
+        last = self.candles[-1]
+        prev = self.candles[-2]
 
+        impulse = abs(last["close"] - last["open"])
+        prev_body = abs(prev["close"] - prev["open"])
 
-# ----------------------------
-# ORDER BLOCK DETECTION
-# ----------------------------
-def find_order_block(history, direction):
-    for i in range(len(history)-2, 0, -1):
-        c = history[i]
+        if prev_body == 0:
+            return 0
 
-        if direction == "buy" and c["close"] < c["open"]:
-            return c
-        if direction == "sell" and c["close"] > c["open"]:
-            return c
-    return None
+        # strong displacement = institutional activity
+        return impulse / prev_body
 
+    # ----------------------------
+    # CRT CONFLUENCE (BONUS ONLY)
+    # ----------------------------
+    def crt_confluence(self):
+        if len(self.candles) < 3:
+            return 0
 
-# ----------------------------
-# PRICE ACTION CONFIRMATION
-# ----------------------------
-def confirm(candle, direction):
-    body = abs(candle["close"] - candle["open"])
-    rng = candle["high"] - candle["low"]
+        c1 = self.candles[-3]
+        c2 = self.candles[-2]
+        c3 = self.candles[-1]
 
-    if rng == 0:
-        return False
+        # simple expansion + sweep behavior
+        expansion = (
+            c3["high"] > c2["high"] and
+            c3["low"] < c2["low"]
+        )
 
-    strength = body / rng
+        body_strength = abs(c3["close"] - c3["open"]) > abs(c2["close"] - c2["open"])
 
-    if direction == "buy":
-        return candle["close"] > candle["open"] and strength > 0.55
-    else:
-        return candle["close"] < candle["open"] and strength > 0.55
+        return 1 if expansion and body_strength else 0
 
+    # ----------------------------
+    # VOLATILITY FILTER
+    # ----------------------------
+    def volatility_ok(self):
+        if len(self.candles) < 10:
+            return False
 
-# ----------------------------
-# TP / SL CALCULATION
-# ----------------------------
-def risk_model(entry, ob, direction):
-    if direction == "buy":
-        sl = ob["low"]
-        tp = entry + (entry - sl) * RISK_REWARD
-    else:
-        sl = ob["high"]
-        tp = entry - (sl - entry) * RISK_REWARD
+        ranges = [c["high"] - c["low"] for c in self.candles[-10:]]
+        avg_range = sum(ranges) / len(ranges)
 
-    return round(sl, 5), round(tp, 5)
+        # avoid dead markets
+        return avg_range > 1
 
+    # ----------------------------
+    # FINAL SCORING ENGINE
+    # ----------------------------
+    def run(self):
+        if not self.ready():
+            return [{"type": "none", "score": 0}]
 
-# ----------------------------
-# SIGNAL ENGINE
-# ----------------------------
-def check(symbol):
-    h1 = data[symbol]["1h"]["history"]
-    m30 = data[symbol]["30m"]["history"]
+        score = 0
 
-    if len(h1) < 10 or len(m30) < 10:
-        return
+        # 1. structure (MOST IMPORTANT)
+        score += self.structure_score() * 0.5
 
-    bias = get_bias(h1)
-    if not bias:
-        return
+        # 2. momentum (entry quality)
+        score += self.momentum_quality() * 0.2
 
-    ob = find_order_block(m30, bias)
-    if not ob:
-        return
+        # 3. order block / displacement
+        ob = self.ob_quality()
+        score += min(ob * 0.15, 0.15)
 
-    last = m30[-1]
+        # 4. volatility filter
+        if self.volatility_ok():
+            score += 0.1
 
-    if not confirm(last, bias):
-        return
+        # 5. CRT bonus
+        if self.crt_confluence():
+            score += 0.05
 
-    entry = last["close"]
-    sl, tp = risk_model(entry, ob, bias)
+        # ----------------------------
+        # DECISION THRESHOLD
+        # ----------------------------
+        if score >= 0.75:
+            return [{
+                "type": "valid",
+                "score": round(score, 2)
+            }]
 
-    print(f"\n🔥 [{symbol}] SIGNAL")
-    print(f"Direction: {bias.upper()}")
-    print(f"Entry: {entry}")
-    print(f"SL: {sl}")
-    print(f"TP: {tp}")
-    print(f"Time: {data[symbol]['1h']['start']}\n")
-
-
-# ----------------------------
-# WEBSOCKET
-# ----------------------------
-async def connect():
-    async with websockets.connect(URL) as ws:
-        for s in SYMBOLS:
-            await ws.send(json.dumps({"ticks": s, "subscribe": 1}))
-
-        while True:
-            msg = json.loads(await ws.recv())
-
-            if "tick" in msg:
-                t = msg["tick"]
-
-                for tf in GRANULARITIES:
-                    update(t["symbol"], t["epoch"], t["quote"], tf)
-                    check(t["symbol"])
-
-
-# ----------------------------
-# RUN
-# ----------------------------
-if __name__ == "__main__":
-    print("🚀 SMART MONEY ENGINE LIVE")
-    asyncio.run(connect())
+        return [{
+            "type": "none",
+            "score": round(score, 2)
+        }]
