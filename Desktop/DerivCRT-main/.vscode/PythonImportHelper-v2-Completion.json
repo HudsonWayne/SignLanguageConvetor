@@ -1,0 +1,548 @@
+[
+    {
+        "label": "csv",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "csv",
+        "description": "csv",
+        "detail": "csv",
+        "documentation": {}
+    },
+    {
+        "label": "time",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "time",
+        "description": "time",
+        "detail": "time",
+        "documentation": {}
+    },
+    {
+        "label": "threading",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "threading",
+        "description": "threading",
+        "detail": "threading",
+        "documentation": {}
+    },
+    {
+        "label": "datetime",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "datetime",
+        "description": "datetime",
+        "detail": "datetime",
+        "documentation": {}
+    },
+    {
+        "label": "datetime",
+        "importPath": "datetime",
+        "description": "datetime",
+        "isExtraImport": true,
+        "detail": "datetime",
+        "documentation": {}
+    },
+    {
+        "label": "datetime",
+        "importPath": "datetime",
+        "description": "datetime",
+        "isExtraImport": true,
+        "detail": "datetime",
+        "documentation": {}
+    },
+    {
+        "label": "timedelta",
+        "importPath": "datetime",
+        "description": "datetime",
+        "isExtraImport": true,
+        "detail": "datetime",
+        "documentation": {}
+    },
+    {
+        "label": "websocket",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "websocket",
+        "description": "websocket",
+        "detail": "websocket",
+        "documentation": {}
+    },
+    {
+        "label": "json",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "json",
+        "description": "json",
+        "detail": "json",
+        "documentation": {}
+    },
+    {
+        "label": "matplotlib.pyplot",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "matplotlib.pyplot",
+        "description": "matplotlib.pyplot",
+        "detail": "matplotlib.pyplot",
+        "documentation": {}
+    },
+    {
+        "label": "matplotlib.animation",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "matplotlib.animation",
+        "description": "matplotlib.animation",
+        "detail": "matplotlib.animation",
+        "documentation": {}
+    },
+    {
+        "label": "Rectangle",
+        "importPath": "matplotlib.patches",
+        "description": "matplotlib.patches",
+        "isExtraImport": true,
+        "detail": "matplotlib.patches",
+        "documentation": {}
+    },
+    {
+        "label": "List",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Dict",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "asyncio",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "asyncio",
+        "description": "asyncio",
+        "detail": "asyncio",
+        "documentation": {}
+    },
+    {
+        "label": "websockets",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "websockets",
+        "description": "websockets",
+        "detail": "websockets",
+        "documentation": {}
+    },
+    {
+        "label": "Flask",
+        "importPath": "flask",
+        "description": "flask",
+        "isExtraImport": true,
+        "detail": "flask",
+        "documentation": {}
+    },
+    {
+        "label": "render_template",
+        "importPath": "flask",
+        "description": "flask",
+        "isExtraImport": true,
+        "detail": "flask",
+        "documentation": {}
+    },
+    {
+        "label": "jsonify",
+        "importPath": "flask",
+        "description": "flask",
+        "isExtraImport": true,
+        "detail": "flask",
+        "documentation": {}
+    },
+    {
+        "label": "random",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "random",
+        "description": "random",
+        "detail": "random",
+        "documentation": {}
+    },
+    {
+        "label": "DerivLiveStreamer",
+        "importPath": "deriv_ws",
+        "description": "deriv_ws",
+        "isExtraImport": true,
+        "detail": "deriv_ws",
+        "documentation": {}
+    },
+    {
+        "label": "LiveCandlePlot",
+        "importPath": "live_plot",
+        "description": "live_plot",
+        "isExtraImport": true,
+        "detail": "live_plot",
+        "documentation": {}
+    },
+    {
+        "label": "CRTStrategy",
+        "importPath": "pattern_detector",
+        "description": "pattern_detector",
+        "isExtraImport": true,
+        "detail": "pattern_detector",
+        "documentation": {}
+    },
+    {
+        "label": "pandas",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "pandas",
+        "description": "pandas",
+        "detail": "pandas",
+        "documentation": {}
+    },
+    {
+        "label": "DataSimulator",
+        "kind": 6,
+        "importPath": "src.data_simulator",
+        "description": "src.data_simulator",
+        "peekOfCode": "class DataSimulator:\n    def __init__(self, filepath, interval=1.0, callback=None):\n        \"\"\"\n        :param filepath: Path to CSV file\n        :param interval: Delay between candles (in seconds)\n        :param callback: Function to call with each candle\n        \"\"\"\n        self.filepath = filepath\n        self.interval = interval\n        self.callback = callback",
+        "detail": "src.data_simulator",
+        "documentation": {}
+    },
+    {
+        "label": "DerivLiveStreamer",
+        "kind": 6,
+        "importPath": "src.deriv_ws",
+        "description": "src.deriv_ws",
+        "peekOfCode": "class DerivLiveStreamer:\n    def __init__(self, app_id, symbol, granularity, callback):\n        self.url = f\"wss://ws.binaryws.com/websockets/v3?app_id={app_id}\"\n        self.symbol = symbol\n        self.granularity = granularity\n        self.callback = callback\n        self.ws = None\n        self.running = False\n    def start(self):\n        self.running = True",
+        "detail": "src.deriv_ws",
+        "documentation": {}
+    },
+    {
+        "label": "LiveCandlePlot",
+        "kind": 6,
+        "importPath": "src.live_plot",
+        "description": "src.live_plot",
+        "peekOfCode": "class LiveCandlePlot:\n    def __init__(self, get_candles_callback, get_trade_signals_callback=None):\n        self.get_candles = get_candles_callback\n        self.get_trade_signals = get_trade_signals_callback\n        self.fig, self.ax = plt.subplots(figsize=(14, 6))\n        self.ani = animation.FuncAnimation(self.fig, self.update, interval=2000, cache_frame_data=False)\n    def update(self, frame):\n        candles = self.get_candles()\n        if not candles:\n            return",
+        "detail": "src.live_plot",
+        "documentation": {}
+    },
+    {
+        "label": "CRTStrategy",
+        "kind": 6,
+        "importPath": "src.pattern_detector",
+        "description": "src.pattern_detector",
+        "peekOfCode": "class CRTStrategy:\n    def __init__(self, candles: List[Dict]):\n        self.candles = candles\n    # ----------------------------\n    # MARKET STRUCTURE\n    # ----------------------------\n    def get_trend(self):\n        if len(self.candles) < 20:\n            return None\n        highs = [c[\"high\"] for c in self.candles[-20:]]",
+        "detail": "src.pattern_detector",
+        "documentation": {}
+    },
+    {
+        "label": "epoch_to_local_candle_time",
+        "kind": 2,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "def epoch_to_local_candle_time(epoch, granularity_seconds):\n    dt = datetime.datetime.fromtimestamp(epoch).astimezone()\n    hours = granularity_seconds // 3600\n    base_hour = (dt.hour // hours) * hours\n    return dt.replace(hour=base_hour, minute=0, second=0, microsecond=0)\ndef update_candle(symbol, epoch, price, granularity_name):\n    seconds = GRANULARITIES[granularity_name]\n    start = epoch_to_local_candle_time(epoch, seconds)\n    candle = candle_data[symbol][granularity_name]\n    if candle[\"start\"] != start:",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "update_candle",
+        "kind": 2,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "def update_candle(symbol, epoch, price, granularity_name):\n    seconds = GRANULARITIES[granularity_name]\n    start = epoch_to_local_candle_time(epoch, seconds)\n    candle = candle_data[symbol][granularity_name]\n    if candle[\"start\"] != start:\n        if candle[\"open\"] is not None:\n            candle[\"history\"].append({\n                \"open\": candle[\"open\"],\n                \"high\": candle[\"high\"],\n                \"low\": candle[\"low\"],",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "candle_body_ratio",
+        "kind": 2,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "def candle_body_ratio(candle):\n    return abs(candle[\"close\"] - candle[\"open\"]) / candle[\"open\"] if candle[\"open\"] else 0\ndef candle_direction(candle):\n    if candle[\"close\"] > candle[\"open\"]:\n        return \"buy\"\n    elif candle[\"close\"] < candle[\"open\"]:\n        return \"sell\"\n    return None\ndef wick_sizes(candle):\n    upper = candle[\"high\"] - max(candle[\"open\"], candle[\"close\"])",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "candle_direction",
+        "kind": 2,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "def candle_direction(candle):\n    if candle[\"close\"] > candle[\"open\"]:\n        return \"buy\"\n    elif candle[\"close\"] < candle[\"open\"]:\n        return \"sell\"\n    return None\ndef wick_sizes(candle):\n    upper = candle[\"high\"] - max(candle[\"open\"], candle[\"close\"])\n    lower = min(candle[\"open\"], candle[\"close\"]) - candle[\"low\"]\n    total = candle[\"high\"] - candle[\"low\"]",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "wick_sizes",
+        "kind": 2,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "def wick_sizes(candle):\n    upper = candle[\"high\"] - max(candle[\"open\"], candle[\"close\"])\n    lower = min(candle[\"open\"], candle[\"close\"]) - candle[\"low\"]\n    total = candle[\"high\"] - candle[\"low\"]\n    return upper, lower, total\ndef is_accumulation_phase(history):\n    # All last 3 candles must have very small bodies <= 0.002 (strict)\n    return len(history) >= 3 and all(candle_body_ratio(c) <= 0.002 for c in history)\ndef is_manipulation_phase(history):\n    if len(history) < 3:",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "is_accumulation_phase",
+        "kind": 2,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "def is_accumulation_phase(history):\n    # All last 3 candles must have very small bodies <= 0.002 (strict)\n    return len(history) >= 3 and all(candle_body_ratio(c) <= 0.002 for c in history)\ndef is_manipulation_phase(history):\n    if len(history) < 3:\n        return False\n    c = history[-1]\n    dir = candle_direction(c)\n    upper, lower, total = wick_sizes(c)\n    if total == 0:",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "is_manipulation_phase",
+        "kind": 2,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "def is_manipulation_phase(history):\n    if len(history) < 3:\n        return False\n    c = history[-1]\n    dir = candle_direction(c)\n    upper, lower, total = wick_sizes(c)\n    if total == 0:\n        return False\n    # For buy direction, strong lower wick >50%, for sell strong upper wick >50%\n    return (dir == \"buy\" and lower / total > 0.5) or (dir == \"sell\" and upper / total > 0.5)",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "is_expansion_phase",
+        "kind": 2,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "def is_expansion_phase(candle, min_ratio):\n    body_r = candle_body_ratio(candle)\n    upper, lower, total = wick_sizes(candle)\n    if total == 0:\n        return False\n    # Body ratio must meet min threshold & wicks <=30%\n    return body_r >= min_ratio and upper / total <= 0.3 and lower / total <= 0.3\ndef explain_failure(symbol, candle, tf, history):\n    reasons = []\n    body_r = candle_body_ratio(candle)",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "explain_failure",
+        "kind": 2,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "def explain_failure(symbol, candle, tf, history):\n    reasons = []\n    body_r = candle_body_ratio(candle)\n    min_body = MIN_BODY_RATIO_4H if tf == \"4h\" else MIN_BODY_RATIO_3H\n    if body_r < min_body:\n        reasons.append(f\"Body too small ({body_r:.4f} < {min_body})\")\n    upper, lower, total = wick_sizes(candle)\n    if total == 0:\n        reasons.append(\"Flat candle\")\n    if not is_accumulation_phase(history[:-1]):",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "calculate_tp_sl",
+        "kind": 2,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "def calculate_tp_sl(entry, direction, sl_pct):\n    sl = entry * (1 - sl_pct) if direction == \"buy\" else entry * (1 + sl_pct)\n    tp = entry + REWARD_RATIO * (entry - sl) if direction == \"buy\" else entry - REWARD_RATIO * (sl - entry)\n    return round(sl, 2), round(tp, 2)\ndef print_signal(symbol, start, direction, entry, sl, tp, tf):\n    emoji = \"🟢\" if direction == \"buy\" else \"🔴\"\n    label = f\"{tf.upper()} CRT\"\n    print(f\"\\n{emoji} [{symbol}] {label} SIGNAL\")\n    print(f\"🕓 Start: {start.strftime('%Y-%m-%d %H:%M:%S')}\")\n    print(f\"📈 Direction: {direction.upper()}\")",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "print_signal",
+        "kind": 2,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "def print_signal(symbol, start, direction, entry, sl, tp, tf):\n    emoji = \"🟢\" if direction == \"buy\" else \"🔴\"\n    label = f\"{tf.upper()} CRT\"\n    print(f\"\\n{emoji} [{symbol}] {label} SIGNAL\")\n    print(f\"🕓 Start: {start.strftime('%Y-%m-%d %H:%M:%S')}\")\n    print(f\"📈 Direction: {direction.upper()}\")\n    print(f\"🎯 Entry: {entry:.2f} | 🛑 SL: {sl:.2f} | ✅ TP: {tp:.2f}\\n\")\nasync def check_signal(symbol, tf):\n    while True:\n        candle = candle_data[symbol][tf]",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "APP_ID",
+        "kind": 5,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "APP_ID = 80707\nSYMBOLS = [\"R_10\", \"R_25\", \"R_50\", \"R_75\", \"R_100\"]\nURL = f\"wss://ws.binaryws.com/websockets/v3?app_id={APP_ID}\"\nREWARD_RATIO = 4\nMAX_SL_PERCENTAGE_SWING = 0.0035  # Reasonable SL for swing trades\nMAX_SL_PERCENTAGE_SCALP = 0.0025\nMIN_BODY_RATIO_4H = 0.0045  # Original stricter threshold\nMIN_BODY_RATIO_3H = 0.004\nGRANULARITIES = {\n    \"4h\": 14400,",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "SYMBOLS",
+        "kind": 5,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "SYMBOLS = [\"R_10\", \"R_25\", \"R_50\", \"R_75\", \"R_100\"]\nURL = f\"wss://ws.binaryws.com/websockets/v3?app_id={APP_ID}\"\nREWARD_RATIO = 4\nMAX_SL_PERCENTAGE_SWING = 0.0035  # Reasonable SL for swing trades\nMAX_SL_PERCENTAGE_SCALP = 0.0025\nMIN_BODY_RATIO_4H = 0.0045  # Original stricter threshold\nMIN_BODY_RATIO_3H = 0.004\nGRANULARITIES = {\n    \"4h\": 14400,\n    \"3h\": 10800,",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "URL",
+        "kind": 5,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "URL = f\"wss://ws.binaryws.com/websockets/v3?app_id={APP_ID}\"\nREWARD_RATIO = 4\nMAX_SL_PERCENTAGE_SWING = 0.0035  # Reasonable SL for swing trades\nMAX_SL_PERCENTAGE_SCALP = 0.0025\nMIN_BODY_RATIO_4H = 0.0045  # Original stricter threshold\nMIN_BODY_RATIO_3H = 0.004\nGRANULARITIES = {\n    \"4h\": 14400,\n    \"3h\": 10800,\n}",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "REWARD_RATIO",
+        "kind": 5,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "REWARD_RATIO = 4\nMAX_SL_PERCENTAGE_SWING = 0.0035  # Reasonable SL for swing trades\nMAX_SL_PERCENTAGE_SCALP = 0.0025\nMIN_BODY_RATIO_4H = 0.0045  # Original stricter threshold\nMIN_BODY_RATIO_3H = 0.004\nGRANULARITIES = {\n    \"4h\": 14400,\n    \"3h\": 10800,\n}\ncandle_data = {",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "MAX_SL_PERCENTAGE_SWING",
+        "kind": 5,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "MAX_SL_PERCENTAGE_SWING = 0.0035  # Reasonable SL for swing trades\nMAX_SL_PERCENTAGE_SCALP = 0.0025\nMIN_BODY_RATIO_4H = 0.0045  # Original stricter threshold\nMIN_BODY_RATIO_3H = 0.004\nGRANULARITIES = {\n    \"4h\": 14400,\n    \"3h\": 10800,\n}\ncandle_data = {\n    symbol: {",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "MAX_SL_PERCENTAGE_SCALP",
+        "kind": 5,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "MAX_SL_PERCENTAGE_SCALP = 0.0025\nMIN_BODY_RATIO_4H = 0.0045  # Original stricter threshold\nMIN_BODY_RATIO_3H = 0.004\nGRANULARITIES = {\n    \"4h\": 14400,\n    \"3h\": 10800,\n}\ncandle_data = {\n    symbol: {\n        tf: {",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "MIN_BODY_RATIO_4H",
+        "kind": 5,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "MIN_BODY_RATIO_4H = 0.0045  # Original stricter threshold\nMIN_BODY_RATIO_3H = 0.004\nGRANULARITIES = {\n    \"4h\": 14400,\n    \"3h\": 10800,\n}\ncandle_data = {\n    symbol: {\n        tf: {\n            \"start\": None,",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "MIN_BODY_RATIO_3H",
+        "kind": 5,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "MIN_BODY_RATIO_3H = 0.004\nGRANULARITIES = {\n    \"4h\": 14400,\n    \"3h\": 10800,\n}\ncandle_data = {\n    symbol: {\n        tf: {\n            \"start\": None,\n            \"open\": None,",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "GRANULARITIES",
+        "kind": 5,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "GRANULARITIES = {\n    \"4h\": 14400,\n    \"3h\": 10800,\n}\ncandle_data = {\n    symbol: {\n        tf: {\n            \"start\": None,\n            \"open\": None,\n            \"high\": None,",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "candle_data",
+        "kind": 5,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "candle_data = {\n    symbol: {\n        tf: {\n            \"start\": None,\n            \"open\": None,\n            \"high\": None,\n            \"low\": None,\n            \"close\": None,\n            \"signaled\": False,\n            \"history\": []",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "calculate_levels",
+        "kind": 2,
+        "importPath": "src.strategy",
+        "description": "src.strategy",
+        "peekOfCode": "def calculate_levels(candle, direction):\n    entry_price = candle[\"close\"]\n    buffer = (candle[\"high\"] - candle[\"low\"]) * 0.1\n    if direction == \"buy\":\n        stop_loss = entry_price - buffer\n        take_profit = entry_price + 2 * buffer\n    elif direction == \"sell\":\n        stop_loss = entry_price + buffer\n        take_profit = entry_price - 2 * buffer\n    else:",
+        "detail": "src.strategy",
+        "documentation": {}
+    },
+    {
+        "label": "detect_crt_zones",
+        "kind": 2,
+        "importPath": "src.timeframe_manager",
+        "description": "src.timeframe_manager",
+        "peekOfCode": "def detect_crt_zones(candles):\n    if len(candles) < 3:\n        return []\n    zones = []\n    for i in range(2, len(candles)):\n        c1, c2, c3 = candles[i-2], candles[i-1], candles[i]\n        if c3[\"close\"] > c2[\"close\"] and c3[\"close\"] > c1[\"close\"]:\n            zones.append({\"index\": i, \"type\": \"buy\", \"price\": c3[\"close\"]})\n        elif c3[\"close\"] < c2[\"close\"] and c3[\"close\"] < c1[\"close\"]:\n            zones.append({\"index\": i, \"type\": \"sell\", \"price\": c3[\"close\"]})",
+        "detail": "src.timeframe_manager",
+        "documentation": {}
+    },
+    {
+        "label": "candle_generator",
+        "kind": 2,
+        "importPath": "src.timeframe_manager",
+        "description": "src.timeframe_manager",
+        "peekOfCode": "def candle_generator():\n    last_close = 100\n    while True:\n        now = datetime.now()\n        next_4h = now.replace(minute=0, second=0, microsecond=0)\n        while next_4h <= now or next_4h.hour % 4 != 0:\n            next_4h += timedelta(minutes=1)\n        wait_sec = (next_4h - now).total_seconds()\n        time.sleep(wait_sec)\n        open_price = last_close",
+        "detail": "src.timeframe_manager",
+        "documentation": {}
+    },
+    {
+        "label": "index",
+        "kind": 2,
+        "importPath": "src.timeframe_manager",
+        "description": "src.timeframe_manager",
+        "peekOfCode": "def index():\n    return render_template(\"chart.html\")\n@app.route(\"/data\")\ndef get_data():\n    candles = datastore[\"candles\"]\n    zones = detect_crt_zones(candles)\n    return jsonify({\"candles\": candles, \"zones\": zones})\nif __name__ == \"__main__\":\n    threading.Thread(target=candle_generator, daemon=True).start()\n    app.run(debug=True)",
+        "detail": "src.timeframe_manager",
+        "documentation": {}
+    },
+    {
+        "label": "get_data",
+        "kind": 2,
+        "importPath": "src.timeframe_manager",
+        "description": "src.timeframe_manager",
+        "peekOfCode": "def get_data():\n    candles = datastore[\"candles\"]\n    zones = detect_crt_zones(candles)\n    return jsonify({\"candles\": candles, \"zones\": zones})\nif __name__ == \"__main__\":\n    threading.Thread(target=candle_generator, daemon=True).start()\n    app.run(debug=True)",
+        "detail": "src.timeframe_manager",
+        "documentation": {}
+    },
+    {
+        "label": "app",
+        "kind": 5,
+        "importPath": "src.timeframe_manager",
+        "description": "src.timeframe_manager",
+        "peekOfCode": "app = Flask(__name__)\n# Shared candle storage\ndatastore = {\n    \"candles\": []\n}\n# --- CRT pattern detector ---\ndef detect_crt_zones(candles):\n    if len(candles) < 3:\n        return []\n    zones = []",
+        "detail": "src.timeframe_manager",
+        "documentation": {}
+    },
+    {
+        "label": "datastore",
+        "kind": 5,
+        "importPath": "src.timeframe_manager",
+        "description": "src.timeframe_manager",
+        "peekOfCode": "datastore = {\n    \"candles\": []\n}\n# --- CRT pattern detector ---\ndef detect_crt_zones(candles):\n    if len(candles) < 3:\n        return []\n    zones = []\n    for i in range(2, len(candles)):\n        c1, c2, c3 = candles[i-2], candles[i-1], candles[i]",
+        "detail": "src.timeframe_manager",
+        "documentation": {}
+    },
+    {
+        "label": "on_new_candle",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def on_new_candle(candle):\n    global signals\n    candles.append(candle)\n    if len(candles) > 100:\n        candles.pop(0)\n    strategy = CRTStrategy(candles)\n    signals = strategy.run()\ndef get_candles():\n    return candles\ndef get_signals():",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "get_candles",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def get_candles():\n    return candles\ndef get_signals():\n    return signals\nif __name__ == \"__main__\":\n    print(\"🟢 Starting CRT + Breakout Detector with Thank You Chart\")\n    DerivLiveStreamer(app_id=\"1089\", symbol=symbol, granularity=14400, callback=on_new_candle).start()\n    plot = LiveCandlePlot(get_candles, get_signals)\n    plot.show()",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "get_signals",
+        "kind": 2,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "def get_signals():\n    return signals\nif __name__ == \"__main__\":\n    print(\"🟢 Starting CRT + Breakout Detector with Thank You Chart\")\n    DerivLiveStreamer(app_id=\"1089\", symbol=symbol, granularity=14400, callback=on_new_candle).start()\n    plot = LiveCandlePlot(get_candles, get_signals)\n    plot.show()",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "symbol",
+        "kind": 5,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "symbol = \"R_75\"\ncandles = []\nsignals = []\ndef on_new_candle(candle):\n    global signals\n    candles.append(candle)\n    if len(candles) > 100:\n        candles.pop(0)\n    strategy = CRTStrategy(candles)\n    signals = strategy.run()",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "candles",
+        "kind": 5,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "candles = []\nsignals = []\ndef on_new_candle(candle):\n    global signals\n    candles.append(candle)\n    if len(candles) > 100:\n        candles.pop(0)\n    strategy = CRTStrategy(candles)\n    signals = strategy.run()\ndef get_candles():",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "signals",
+        "kind": 5,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "signals = []\ndef on_new_candle(candle):\n    global signals\n    candles.append(candle)\n    if len(candles) > 100:\n        candles.pop(0)\n    strategy = CRTStrategy(candles)\n    signals = strategy.run()\ndef get_candles():\n    return candles",
+        "detail": "main",
+        "documentation": {}
+    }
+]
