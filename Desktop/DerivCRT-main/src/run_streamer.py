@@ -83,10 +83,15 @@ async def run():
 
     while True:
         try:
+            async def run():
+    print("🚀 CRT ENGINE STARTED (STABLE MODE)")
+
+    while True:
+        try:
             async with websockets.connect(
                 URL,
-                ping_interval=20,
-                ping_timeout=20
+                ping_interval=None,   # 🔥 disable built-in ping (important)
+                close_timeout=5
             ) as ws:
 
                 # subscribe
@@ -98,24 +103,35 @@ async def run():
                     print(f"✅ Subscribed {s}")
 
                 while True:
-                    msg = json.loads(await ws.recv())
+                    try:
+                        msg = await asyncio.wait_for(ws.recv(), timeout=30)
+                        msg = json.loads(msg)
 
-                    if "tick" not in msg:
-                        continue
+                        if "tick" not in msg:
+                            continue
 
-                    t = msg["tick"]
-                    symbol = t["symbol"]
-                    price = float(t["quote"])
-                    epoch = t["epoch"]
+                        t = msg["tick"]
+                        symbol = t["symbol"]
+                        price = float(t["quote"])
+                        epoch = t["epoch"]
 
-                    candle = update_candle_from_tick(symbol, price, epoch)
+                        candle = update_candle_from_tick(symbol, price, epoch)
 
-                    if candle:
-                        process_candle(symbol, candle)
+                        if candle:
+                            process_candle(symbol, candle)
+
+                    except asyncio.TimeoutError:
+                        # 🔥 keep connection alive manually
+                        await ws.ping()
+                        print("🔁 Ping sent to keep connection alive")
+
+                    except Exception as e:
+                        print("⚠️ Stream issue:", e)
+                        break
 
         except Exception as e:
             print("🔄 Reconnecting...", e)
-            await asyncio.sleep(5)
+            await asyncio.sleep(3)
 
 
 # ----------------------------
