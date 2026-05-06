@@ -1,84 +1,79 @@
 from typing import List, Dict
+import numpy as np
 
 class CRTStrategy:
     def __init__(self, candles: List[Dict]):
         self.candles = candles
 
     # ----------------------------
-    # MARKET STRUCTURE
+    # 1. TRENDLINE BIAS (1H + 30M concept)
     # ----------------------------
-    def get_trend(self):
+    def get_bias(self):
         if len(self.candles) < 20:
             return None
 
         highs = [c["high"] for c in self.candles[-20:]]
         lows = [c["low"] for c in self.candles[-20:]]
 
-        if highs[-1] > highs[-5] and lows[-1] > lows[-5]:
+        high_slope = np.polyfit(range(20), highs, 1)[0]
+        low_slope = np.polyfit(range(20), lows, 1)[0]
+
+        if high_slope > 0 and low_slope > 0:
             return "bullish"
-        elif highs[-1] < highs[-5] and lows[-1] < lows[-5]:
+        elif high_slope < 0 and low_slope < 0:
             return "bearish"
         return "range"
 
     # ----------------------------
-    # BREAK OF STRUCTURE (BOS)
-    # ----------------------------
-    def detect_bos(self):
-        if len(self.candles) < 5:
-            return None
-
-        prev = self.candles[-3]
-        last = self.candles[-1]
-
-        if last["close"] > prev["high"]:
-            return "bullish"
-        elif last["close"] < prev["low"]:
-            return "bearish"
-        return None
-
-    # ----------------------------
-    # ORDER BLOCK DETECTION
+    # 2. ORDER BLOCK DETECTION
     # ----------------------------
     def find_order_block(self, direction):
-        for i in range(len(self.candles)-3, 0, -1):
+        for i in range(len(self.candles) - 5, 0, -1):
             c = self.candles[i]
 
-            # last opposite candle
             if direction == "buy" and c["close"] < c["open"]:
                 return c
-            elif direction == "sell" and c["close"] > c["open"]:
+            if direction == "sell" and c["close"] > c["open"]:
                 return c
         return None
 
     # ----------------------------
-    # ENTRY CONFIRMATION
+    # 3. PRICE ACTION CONFIRMATION
     # ----------------------------
-    def confirm_entry(self, direction):
-        c = self.candles[-1]
+    def price_action_confirm(self, candle, direction):
+        body = abs(candle["close"] - candle["open"])
+        rng = candle["high"] - candle["low"]
 
-        body = abs(c["close"] - c["open"])
-        range_ = c["high"] - c["low"]
-
-        if range_ == 0:
+        if rng == 0:
             return False
 
-        body_ratio = body / range_
+        body_ratio = body / rng
 
         if direction == "buy":
-            return c["close"] > c["open"] and body_ratio > 0.6
-        elif direction == "sell":
-            return c["close"] < c["open"] and body_ratio > 0.6
-
-        return False
+            return candle["close"] > candle["open"] and body_ratio > 0.55
+        else:
+            return candle["close"] < candle["open"] and body_ratio > 0.55
 
     # ----------------------------
-    # CLASSIFY TRADE TYPE
+    # 4. CRT (OPTIONAL BOOST ONLY)
+    # ----------------------------
+    def crt_confluence(self):
+        if len(self.candles) < 10:
+            return False
+
+        c = self.candles[-1]
+        prev = self.candles[-2]
+
+        return (
+            c["high"] > prev["high"] and
+            c["low"] < prev["low"]
+        )
+
+    # ----------------------------
+    # 5. TRADE TYPE
     # ----------------------------
     def classify_trade(self):
-        if len(self.candles) < 50:
-            return "scalp"
-
-        volatility = sum(c["high"] - c["low"] for c in self.candles[-20:]) / 20
+        volatility = np.mean([c["high"] - c["low"] for c in self.candles[-20:]])
 
         if volatility > 5:
             return "swing"
@@ -90,37 +85,33 @@ class CRTStrategy:
     def run(self):
         signals = []
 
-        trend = self.get_trend()
-        bos = self.detect_bos()
+        bias = self.get_bias()
+        if not bias or bias == "range":
+            return []
 
-        if not trend or not bos:
-            return [{"type": "none"}]
-
-        # must align
-        if trend == "bullish" and bos != "bullish":
-            return [{"type": "none"}]
-        if trend == "bearish" and bos != "bearish":
-            return [{"type": "none"}]
-
-        direction = "buy" if trend == "bullish" else "sell"
+        direction = "buy" if bias == "bullish" else "sell"
 
         ob = self.find_order_block(direction)
         if not ob:
-            return [{"type": "none"}]
+            return []
 
-        if not self.confirm_entry(direction):
-            return [{"type": "none"}]
+        last = self.candles[-1]
 
+        # must be at zone + confirmation
+        if not self.price_action_confirm(last, direction):
+            return []
+
+        crt_bonus = self.crt_confluence()
         trade_type = self.classify_trade()
 
-        entry = self.candles[-1]["close"]
+        entry = last["close"]
 
         if direction == "buy":
             sl = ob["low"]
-            tp = entry + (entry - sl) * 3
+            tp = entry + (entry - sl) * (3.5 if crt_bonus else 2.5)
         else:
             sl = ob["high"]
-            tp = entry - (sl - entry) * 3
+            tp = entry - (sl - entry) * (3.5 if crt_bonus else 2.5)
 
         signals.append({
             "type": direction,
@@ -128,6 +119,7 @@ class CRTStrategy:
             "sl": sl,
             "tp": tp,
             "trade_type": trade_type,
+            "crt_bonus": crt_bonus,
             "entry_index": len(self.candles) - 1
         })
 

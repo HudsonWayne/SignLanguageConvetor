@@ -120,6 +120,15 @@
         "documentation": {}
     },
     {
+        "label": "numpy",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "numpy",
+        "description": "numpy",
+        "detail": "numpy",
+        "documentation": {}
+    },
+    {
         "label": "asyncio",
         "kind": 6,
         "isExtraImport": true,
@@ -226,7 +235,7 @@
         "kind": 6,
         "importPath": "src.pattern_detector",
         "description": "src.pattern_detector",
-        "peekOfCode": "class CRTStrategy:\n    def __init__(self, candles: List[Dict]):\n        self.candles = candles\n    # ----------------------------\n    # MARKET STRUCTURE\n    # ----------------------------\n    def get_trend(self):\n        if len(self.candles) < 20:\n            return None\n        highs = [c[\"high\"] for c in self.candles[-20:]]",
+        "peekOfCode": "class CRTStrategy:\n    def __init__(self, candles: List[Dict]):\n        self.candles = candles\n    # ----------------------------\n    # 1. TRENDLINE BIAS (1H + 30M concept)\n    # ----------------------------\n    def get_bias(self):\n        if len(self.candles) < 20:\n            return None\n        highs = [c[\"high\"] for c in self.candles[-20:]]",
         "detail": "src.pattern_detector",
         "documentation": {}
     },
