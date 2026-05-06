@@ -195,15 +195,6 @@
         "documentation": {}
     },
     {
-        "label": "pandas",
-        "kind": 6,
-        "isExtraImport": true,
-        "importPath": "pandas",
-        "description": "pandas",
-        "detail": "pandas",
-        "documentation": {}
-    },
-    {
         "label": "DataSimulator",
         "kind": 6,
         "importPath": "src.data_simulator",
@@ -496,7 +487,7 @@
         "kind": 2,
         "importPath": "main",
         "description": "main",
-        "peekOfCode": "def on_new_candle(candle):\n    global signals\n    candles.append(candle)\n    if len(candles) > 100:\n        candles.pop(0)\n    strategy = CRTStrategy(candles)\n    signals = strategy.run()\ndef get_candles():\n    return candles\ndef get_signals():",
+        "peekOfCode": "def on_new_candle(candle):\n    global signals\n    candles.append(candle)\n    if len(candles) > 200:\n        candles.pop(0)\n    signals = strategy.run()\ndef get_candles():\n    return candles\ndef get_signals():\n    return signals",
         "detail": "main",
         "documentation": {}
     },
@@ -505,7 +496,7 @@
         "kind": 2,
         "importPath": "main",
         "description": "main",
-        "peekOfCode": "def get_candles():\n    return candles\ndef get_signals():\n    return signals\nif __name__ == \"__main__\":\n    print(\"🟢 Starting CRT + Breakout Detector with Thank You Chart\")\n    DerivLiveStreamer(app_id=\"1089\", symbol=symbol, granularity=14400, callback=on_new_candle).start()\n    plot = LiveCandlePlot(get_candles, get_signals)\n    plot.show()",
+        "peekOfCode": "def get_candles():\n    return candles\ndef get_signals():\n    return signals\nif __name__ == \"__main__\":\n    print(\"🚀 SMART MONEY ENGINE STARTED\")\n    DerivLiveStreamer(\n        app_id=\"1089\",\n        symbol=symbol,\n        granularity=14400,",
         "detail": "main",
         "documentation": {}
     },
@@ -514,7 +505,7 @@
         "kind": 2,
         "importPath": "main",
         "description": "main",
-        "peekOfCode": "def get_signals():\n    return signals\nif __name__ == \"__main__\":\n    print(\"🟢 Starting CRT + Breakout Detector with Thank You Chart\")\n    DerivLiveStreamer(app_id=\"1089\", symbol=symbol, granularity=14400, callback=on_new_candle).start()\n    plot = LiveCandlePlot(get_candles, get_signals)\n    plot.show()",
+        "peekOfCode": "def get_signals():\n    return signals\nif __name__ == \"__main__\":\n    print(\"🚀 SMART MONEY ENGINE STARTED\")\n    DerivLiveStreamer(\n        app_id=\"1089\",\n        symbol=symbol,\n        granularity=14400,\n        callback=on_new_candle\n    ).start()",
         "detail": "main",
         "documentation": {}
     },
@@ -523,7 +514,7 @@
         "kind": 5,
         "importPath": "main",
         "description": "main",
-        "peekOfCode": "symbol = \"R_75\"\ncandles = []\nsignals = []\ndef on_new_candle(candle):\n    global signals\n    candles.append(candle)\n    if len(candles) > 100:\n        candles.pop(0)\n    strategy = CRTStrategy(candles)\n    signals = strategy.run()",
+        "peekOfCode": "symbol = \"R_75\"\ncandles = []\nsignals = []\nstrategy = CRTStrategy(candles)\ndef on_new_candle(candle):\n    global signals\n    candles.append(candle)\n    if len(candles) > 200:\n        candles.pop(0)\n    signals = strategy.run()",
         "detail": "main",
         "documentation": {}
     },
@@ -532,7 +523,7 @@
         "kind": 5,
         "importPath": "main",
         "description": "main",
-        "peekOfCode": "candles = []\nsignals = []\ndef on_new_candle(candle):\n    global signals\n    candles.append(candle)\n    if len(candles) > 100:\n        candles.pop(0)\n    strategy = CRTStrategy(candles)\n    signals = strategy.run()\ndef get_candles():",
+        "peekOfCode": "candles = []\nsignals = []\nstrategy = CRTStrategy(candles)\ndef on_new_candle(candle):\n    global signals\n    candles.append(candle)\n    if len(candles) > 200:\n        candles.pop(0)\n    signals = strategy.run()\ndef get_candles():",
         "detail": "main",
         "documentation": {}
     },
@@ -541,7 +532,16 @@
         "kind": 5,
         "importPath": "main",
         "description": "main",
-        "peekOfCode": "signals = []\ndef on_new_candle(candle):\n    global signals\n    candles.append(candle)\n    if len(candles) > 100:\n        candles.pop(0)\n    strategy = CRTStrategy(candles)\n    signals = strategy.run()\ndef get_candles():\n    return candles",
+        "peekOfCode": "signals = []\nstrategy = CRTStrategy(candles)\ndef on_new_candle(candle):\n    global signals\n    candles.append(candle)\n    if len(candles) > 200:\n        candles.pop(0)\n    signals = strategy.run()\ndef get_candles():\n    return candles",
+        "detail": "main",
+        "documentation": {}
+    },
+    {
+        "label": "strategy",
+        "kind": 5,
+        "importPath": "main",
+        "description": "main",
+        "peekOfCode": "strategy = CRTStrategy(candles)\ndef on_new_candle(candle):\n    global signals\n    candles.append(candle)\n    if len(candles) > 200:\n        candles.pop(0)\n    signals = strategy.run()\ndef get_candles():\n    return candles\ndef get_signals():",
         "detail": "main",
         "documentation": {}
     }
