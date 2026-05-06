@@ -1,126 +1,205 @@
-from typing import List, Dict
-import numpy as np
+import asyncio
+import datetime
+import websockets
+import json
 
-class CRTStrategy:
-    def __init__(self, candles: List[Dict]):
-        self.candles = candles
+APP_ID = 80707
+SYMBOLS = ["R_10", "R_25", "R_50", "R_75", "R_100"]
+URL = f"wss://ws.binaryws.com/websockets/v3?app_id={APP_ID}"
 
-    # ----------------------------
-    # 1. TRENDLINE BIAS (1H + 30M concept)
-    # ----------------------------
-    def get_bias(self):
-        if len(self.candles) < 20:
-            return None
+GRANULARITIES = {
+    "1h": 3600,
+    "30m": 1800,
+}
 
-        highs = [c["high"] for c in self.candles[-20:]]
-        lows = [c["low"] for c in self.candles[-20:]]
+RISK_REWARD = 3
 
-        high_slope = np.polyfit(range(20), highs, 1)[0]
-        low_slope = np.polyfit(range(20), lows, 1)[0]
+# ----------------------------
+# STORAGE
+# ----------------------------
+data = {
+    symbol: {
+        tf: {
+            "start": None,
+            "open": None,
+            "high": None,
+            "low": None,
+            "close": None,
+            "history": [],
+            "closed": False
+        }
+        for tf in GRANULARITIES
+    }
+    for symbol in SYMBOLS
+}
 
-        if high_slope > 0 and low_slope > 0:
-            return "bullish"
-        elif high_slope < 0 and low_slope < 0:
-            return "bearish"
-        return "range"
 
-    # ----------------------------
-    # 2. ORDER BLOCK DETECTION
-    # ----------------------------
-    def find_order_block(self, direction):
-        for i in range(len(self.candles) - 5, 0, -1):
-            c = self.candles[i]
+# ----------------------------
+# TIMEFRAME ALIGNMENT
+# ----------------------------
+def get_candle_time(epoch, tf_seconds):
+    return epoch - (epoch % tf_seconds)
 
-            if direction == "buy" and c["close"] < c["open"]:
-                return c
-            if direction == "sell" and c["close"] > c["open"]:
-                return c
+
+# ----------------------------
+# UPDATE CANDLES
+# ----------------------------
+def update(symbol, epoch, price, tf):
+    tf_seconds = GRANULARITIES[tf]
+    start = get_candle_time(epoch, tf_seconds)
+
+    c = data[symbol][tf]
+
+    if c["start"] != start:
+        if c["open"] is not None:
+            c["history"].append({
+                "open": c["open"],
+                "high": c["high"],
+                "low": c["low"],
+                "close": c["close"]
+            })
+            if len(c["history"]) > 50:
+                c["history"].pop(0)
+
+        c.update({
+            "start": start,
+            "open": price,
+            "high": price,
+            "low": price,
+            "close": price,
+            "closed": True
+        })
+    else:
+        c["high"] = max(c["high"], price)
+        c["low"] = min(c["low"], price)
+        c["close"] = price
+
+
+# ----------------------------
+# MARKET STRUCTURE (TREND)
+# ----------------------------
+def get_bias(history):
+    if len(history) < 10:
         return None
 
-    # ----------------------------
-    # 3. PRICE ACTION CONFIRMATION
-    # ----------------------------
-    def price_action_confirm(self, candle, direction):
-        body = abs(candle["close"] - candle["open"])
-        rng = candle["high"] - candle["low"]
+    highs = [c["high"] for c in history[-10:]]
+    lows = [c["low"] for c in history[-10:]]
 
-        if rng == 0:
-            return False
+    hh = all(highs[i] >= highs[i-1] for i in range(1, len(highs)))
+    ll = all(lows[i] >= lows[i-1] for i in range(1, len(lows)))
 
-        body_ratio = body / rng
+    lh = all(highs[i] <= highs[i-1] for i in range(1, len(highs)))
+    hl = all(lows[i] <= lows[i-1] for i in range(1, len(lows)))
 
-        if direction == "buy":
-            return candle["close"] > candle["open"] and body_ratio > 0.55
-        else:
-            return candle["close"] < candle["open"] and body_ratio > 0.55
+    if hh and hl:
+        return "buy"
+    if lh and ll:
+        return "sell"
+    return None
 
-    # ----------------------------
-    # 4. CRT (OPTIONAL BOOST ONLY)
-    # ----------------------------
-    def crt_confluence(self):
-        if len(self.candles) < 10:
-            return False
 
-        c = self.candles[-1]
-        prev = self.candles[-2]
+# ----------------------------
+# ORDER BLOCK DETECTION
+# ----------------------------
+def find_order_block(history, direction):
+    for i in range(len(history)-2, 0, -1):
+        c = history[i]
 
-        return (
-            c["high"] > prev["high"] and
-            c["low"] < prev["low"]
-        )
+        if direction == "buy" and c["close"] < c["open"]:
+            return c
+        if direction == "sell" and c["close"] > c["open"]:
+            return c
+    return None
 
-    # ----------------------------
-    # 5. TRADE TYPE
-    # ----------------------------
-    def classify_trade(self):
-        volatility = np.mean([c["high"] - c["low"] for c in self.candles[-20:]])
 
-        if volatility > 5:
-            return "swing"
-        return "scalp"
+# ----------------------------
+# PRICE ACTION CONFIRMATION
+# ----------------------------
+def confirm(candle, direction):
+    body = abs(candle["close"] - candle["open"])
+    rng = candle["high"] - candle["low"]
 
-    # ----------------------------
-    # MAIN ENGINE
-    # ----------------------------
-    def run(self):
-        signals = []
+    if rng == 0:
+        return False
 
-        bias = self.get_bias()
-        if not bias or bias == "range":
-            return []
+    strength = body / rng
 
-        direction = "buy" if bias == "bullish" else "sell"
+    if direction == "buy":
+        return candle["close"] > candle["open"] and strength > 0.55
+    else:
+        return candle["close"] < candle["open"] and strength > 0.55
 
-        ob = self.find_order_block(direction)
-        if not ob:
-            return []
 
-        last = self.candles[-1]
+# ----------------------------
+# TP / SL CALCULATION
+# ----------------------------
+def risk_model(entry, ob, direction):
+    if direction == "buy":
+        sl = ob["low"]
+        tp = entry + (entry - sl) * RISK_REWARD
+    else:
+        sl = ob["high"]
+        tp = entry - (sl - entry) * RISK_REWARD
 
-        # must be at zone + confirmation
-        if not self.price_action_confirm(last, direction):
-            return []
+    return round(sl, 5), round(tp, 5)
 
-        crt_bonus = self.crt_confluence()
-        trade_type = self.classify_trade()
 
-        entry = last["close"]
+# ----------------------------
+# SIGNAL ENGINE
+# ----------------------------
+def check(symbol):
+    h1 = data[symbol]["1h"]["history"]
+    m30 = data[symbol]["30m"]["history"]
 
-        if direction == "buy":
-            sl = ob["low"]
-            tp = entry + (entry - sl) * (3.5 if crt_bonus else 2.5)
-        else:
-            sl = ob["high"]
-            tp = entry - (sl - entry) * (3.5 if crt_bonus else 2.5)
+    if len(h1) < 10 or len(m30) < 10:
+        return
 
-        signals.append({
-            "type": direction,
-            "entry_price": entry,
-            "sl": sl,
-            "tp": tp,
-            "trade_type": trade_type,
-            "crt_bonus": crt_bonus,
-            "entry_index": len(self.candles) - 1
-        })
+    bias = get_bias(h1)
+    if not bias:
+        return
 
-        return signals
+    ob = find_order_block(m30, bias)
+    if not ob:
+        return
+
+    last = m30[-1]
+
+    if not confirm(last, bias):
+        return
+
+    entry = last["close"]
+    sl, tp = risk_model(entry, ob, bias)
+
+    print(f"\n🔥 [{symbol}] SIGNAL")
+    print(f"Direction: {bias.upper()}")
+    print(f"Entry: {entry}")
+    print(f"SL: {sl}")
+    print(f"TP: {tp}")
+    print(f"Time: {data[symbol]['1h']['start']}\n")
+
+
+# ----------------------------
+# WEBSOCKET
+# ----------------------------
+async def connect():
+    async with websockets.connect(URL) as ws:
+        for s in SYMBOLS:
+            await ws.send(json.dumps({"ticks": s, "subscribe": 1}))
+
+        while True:
+            msg = json.loads(await ws.recv())
+
+            if "tick" in msg:
+                t = msg["tick"]
+
+                for tf in GRANULARITIES:
+                    update(t["symbol"], t["epoch"], t["quote"], tf)
+                    check(t["symbol"])
+
+
+# ----------------------------
+# RUN
+# ----------------------------
+if __name__ == "__main__":
+    print("🚀 SMART MONEY ENGINE LIVE")
+    asyncio.run(connect())
