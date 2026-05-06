@@ -95,6 +95,40 @@
         "documentation": {}
     },
     {
+        "label": "asyncio",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "asyncio",
+        "description": "asyncio",
+        "detail": "asyncio",
+        "documentation": {}
+    },
+    {
+        "label": "websockets",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "websockets",
+        "description": "websockets",
+        "detail": "websockets",
+        "documentation": {}
+    },
+    {
+        "label": "CRTStrategy",
+        "importPath": "pattern_detector",
+        "description": "pattern_detector",
+        "isExtraImport": true,
+        "detail": "pattern_detector",
+        "documentation": {}
+    },
+    {
+        "label": "CRTStrategy",
+        "importPath": "pattern_detector",
+        "description": "pattern_detector",
+        "isExtraImport": true,
+        "detail": "pattern_detector",
+        "documentation": {}
+    },
+    {
         "label": "Flask",
         "importPath": "flask",
         "description": "flask",
@@ -144,14 +178,6 @@
         "documentation": {}
     },
     {
-        "label": "CRTStrategy",
-        "importPath": "pattern_detector",
-        "description": "pattern_detector",
-        "isExtraImport": true,
-        "detail": "pattern_detector",
-        "documentation": {}
-    },
-    {
         "label": "DataSimulator",
         "kind": 6,
         "importPath": "src.data_simulator",
@@ -185,6 +211,78 @@
         "description": "src.pattern_detector",
         "peekOfCode": "class CRTStrategy:\n    \"\"\"\n    CONFIRMATION LAYER ONLY\n    This module does NOT:\n    - create trades\n    - calculate SL/TP\n    - decide direction\n    It ONLY answers:\n    → \"Is this setup high probability?\"\n    \"\"\"",
         "detail": "src.pattern_detector",
+        "documentation": {}
+    },
+    {
+        "label": "update_candle_from_tick",
+        "kind": 2,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "def update_candle_from_tick(symbol, price, epoch):\n    buf = buffers[symbol]\n    if buf[\"open\"] is None:\n        buf[\"open\"] = buf[\"high\"] = buf[\"low\"] = buf[\"close\"] = price\n        buf[\"start_epoch\"] = epoch\n        return None\n    # update live candle\n    buf[\"high\"] = max(buf[\"high\"], price)\n    buf[\"low\"] = min(buf[\"low\"], price)\n    buf[\"close\"] = price",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "process_candle",
+        "kind": 2,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "def process_candle(symbol, candle):\n    candles = symbol_candles[symbol]\n    candles.append(candle)\n    if len(candles) > 100:\n        candles.pop(0)\n    strategy = CRTStrategy(candles)\n    result = strategy.run()[0]\n    if result[\"type\"] == \"valid\":\n        print(f\"🔥 SIGNAL {symbol} | SCORE: {result['score']}\")\n# ----------------------------",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "APP_ID",
+        "kind": 5,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "APP_ID = 80707\nSYMBOLS = [\"R_10\", \"R_25\", \"R_50\", \"R_75\", \"R_100\"]\nURL = f\"wss://ws.binaryws.com/websockets/v3?app_id={APP_ID}\"\n# ----------------------------\n# SIMPLE CANDLE STORAGE\n# ----------------------------\nsymbol_candles = {s: [] for s in SYMBOLS}\nbuffers = {\n    s: {\n        \"open\": None,",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "SYMBOLS",
+        "kind": 5,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "SYMBOLS = [\"R_10\", \"R_25\", \"R_50\", \"R_75\", \"R_100\"]\nURL = f\"wss://ws.binaryws.com/websockets/v3?app_id={APP_ID}\"\n# ----------------------------\n# SIMPLE CANDLE STORAGE\n# ----------------------------\nsymbol_candles = {s: [] for s in SYMBOLS}\nbuffers = {\n    s: {\n        \"open\": None,\n        \"high\": None,",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "URL",
+        "kind": 5,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "URL = f\"wss://ws.binaryws.com/websockets/v3?app_id={APP_ID}\"\n# ----------------------------\n# SIMPLE CANDLE STORAGE\n# ----------------------------\nsymbol_candles = {s: [] for s in SYMBOLS}\nbuffers = {\n    s: {\n        \"open\": None,\n        \"high\": None,\n        \"low\": None,",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "symbol_candles",
+        "kind": 5,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "symbol_candles = {s: [] for s in SYMBOLS}\nbuffers = {\n    s: {\n        \"open\": None,\n        \"high\": None,\n        \"low\": None,\n        \"close\": None,\n        \"start_epoch\": None\n    } for s in SYMBOLS\n}",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "buffers",
+        "kind": 5,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "buffers = {\n    s: {\n        \"open\": None,\n        \"high\": None,\n        \"low\": None,\n        \"close\": None,\n        \"start_epoch\": None\n    } for s in SYMBOLS\n}\nCANDLE_DURATION = 60  # 1-minute candles",
+        "detail": "src.run_streamer",
+        "documentation": {}
+    },
+    {
+        "label": "CANDLE_DURATION",
+        "kind": 5,
+        "importPath": "src.run_streamer",
+        "description": "src.run_streamer",
+        "peekOfCode": "CANDLE_DURATION = 60  # 1-minute candles\n# ----------------------------\n# BUILD CANDLES FROM TICKS\n# ----------------------------\ndef update_candle_from_tick(symbol, price, epoch):\n    buf = buffers[symbol]\n    if buf[\"open\"] is None:\n        buf[\"open\"] = buf[\"high\"] = buf[\"low\"] = buf[\"close\"] = price\n        buf[\"start_epoch\"] = epoch\n        return None",
+        "detail": "src.run_streamer",
         "documentation": {}
     },
     {
