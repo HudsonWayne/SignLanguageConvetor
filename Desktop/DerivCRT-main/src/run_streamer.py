@@ -8,9 +8,10 @@ SYMBOLS = ["R_10", "R_25", "R_50", "R_75", "R_100"]
 URL = f"wss://ws.binaryws.com/websockets/v3?app_id={APP_ID}"
 
 # ----------------------------
-# SIMPLE CANDLE STORAGE
+# STORAGE
 # ----------------------------
 symbol_candles = {s: [] for s in SYMBOLS}
+
 buffers = {
     s: {
         "open": None,
@@ -21,11 +22,11 @@ buffers = {
     } for s in SYMBOLS
 }
 
-CANDLE_DURATION = 60  # 1-minute candles
+CANDLE_DURATION = 60
 
 
 # ----------------------------
-# BUILD CANDLES FROM TICKS
+# BUILD CANDLES
 # ----------------------------
 def update_candle_from_tick(symbol, price, epoch):
     buf = buffers[symbol]
@@ -35,12 +36,10 @@ def update_candle_from_tick(symbol, price, epoch):
         buf["start_epoch"] = epoch
         return None
 
-    # update live candle
     buf["high"] = max(buf["high"], price)
     buf["low"] = min(buf["low"], price)
     buf["close"] = price
 
-    # close candle
     if epoch - buf["start_epoch"] >= CANDLE_DURATION:
         candle = {
             "open": buf["open"],
@@ -49,7 +48,6 @@ def update_candle_from_tick(symbol, price, epoch):
             "close": buf["close"]
         }
 
-        # reset buffer
         buf["open"] = buf["high"] = buf["low"] = buf["close"] = price
         buf["start_epoch"] = epoch
 
@@ -59,7 +57,7 @@ def update_candle_from_tick(symbol, price, epoch):
 
 
 # ----------------------------
-# SIGNAL CHECK
+# PROCESS STRATEGY
 # ----------------------------
 def process_candle(symbol, candle):
     candles = symbol_candles[symbol]
@@ -76,21 +74,16 @@ def process_candle(symbol, candle):
 
 
 # ----------------------------
-# MAIN STREAM FUNCTION
+# MAIN RUNNER
 # ----------------------------
 async def run():
     print("🚀 CRT ENGINE STARTED (STABLE MODE)")
 
     while True:
         try:
-            async def run():
-    print("🚀 CRT ENGINE STARTED (STABLE MODE)")
-
-    while True:
-        try:
             async with websockets.connect(
                 URL,
-                ping_interval=None,   # 🔥 disable built-in ping (important)
+                ping_interval=None,
                 close_timeout=5
             ) as ws:
 
@@ -121,21 +114,20 @@ async def run():
                             process_candle(symbol, candle)
 
                     except asyncio.TimeoutError:
-                        # 🔥 keep connection alive manually
                         await ws.ping()
-                        print("🔁 Ping sent to keep connection alive")
+                        print("🔁 Keep-alive ping sent")
 
                     except Exception as e:
-                        print("⚠️ Stream issue:", e)
+                        print("⚠️ Stream error:", e)
                         break
 
         except Exception as e:
-            print("🔄 Reconnecting...", e)
+            print("🔄 Reconnecting WebSocket...", e)
             await asyncio.sleep(3)
 
 
 # ----------------------------
-# ENTRY POINT (CRITICAL)
+# ENTRY POINT
 # ----------------------------
 if __name__ == "__main__":
     asyncio.run(run())

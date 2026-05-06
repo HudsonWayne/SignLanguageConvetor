@@ -218,7 +218,7 @@
         "kind": 2,
         "importPath": "src.run_streamer",
         "description": "src.run_streamer",
-        "peekOfCode": "def update_candle_from_tick(symbol, price, epoch):\n    buf = buffers[symbol]\n    if buf[\"open\"] is None:\n        buf[\"open\"] = buf[\"high\"] = buf[\"low\"] = buf[\"close\"] = price\n        buf[\"start_epoch\"] = epoch\n        return None\n    # update live candle\n    buf[\"high\"] = max(buf[\"high\"], price)\n    buf[\"low\"] = min(buf[\"low\"], price)\n    buf[\"close\"] = price",
+        "peekOfCode": "def update_candle_from_tick(symbol, price, epoch):\n    buf = buffers[symbol]\n    if buf[\"open\"] is None:\n        buf[\"open\"] = buf[\"high\"] = buf[\"low\"] = buf[\"close\"] = price\n        buf[\"start_epoch\"] = epoch\n        return None\n    buf[\"high\"] = max(buf[\"high\"], price)\n    buf[\"low\"] = min(buf[\"low\"], price)\n    buf[\"close\"] = price\n    if epoch - buf[\"start_epoch\"] >= CANDLE_DURATION:",
         "detail": "src.run_streamer",
         "documentation": {}
     },
@@ -236,7 +236,7 @@
         "kind": 5,
         "importPath": "src.run_streamer",
         "description": "src.run_streamer",
-        "peekOfCode": "APP_ID = 80707\nSYMBOLS = [\"R_10\", \"R_25\", \"R_50\", \"R_75\", \"R_100\"]\nURL = f\"wss://ws.binaryws.com/websockets/v3?app_id={APP_ID}\"\n# ----------------------------\n# SIMPLE CANDLE STORAGE\n# ----------------------------\nsymbol_candles = {s: [] for s in SYMBOLS}\nbuffers = {\n    s: {\n        \"open\": None,",
+        "peekOfCode": "APP_ID = 80707\nSYMBOLS = [\"R_10\", \"R_25\", \"R_50\", \"R_75\", \"R_100\"]\nURL = f\"wss://ws.binaryws.com/websockets/v3?app_id={APP_ID}\"\n# ----------------------------\n# STORAGE\n# ----------------------------\nsymbol_candles = {s: [] for s in SYMBOLS}\nbuffers = {\n    s: {\n        \"open\": None,",
         "detail": "src.run_streamer",
         "documentation": {}
     },
@@ -245,7 +245,7 @@
         "kind": 5,
         "importPath": "src.run_streamer",
         "description": "src.run_streamer",
-        "peekOfCode": "SYMBOLS = [\"R_10\", \"R_25\", \"R_50\", \"R_75\", \"R_100\"]\nURL = f\"wss://ws.binaryws.com/websockets/v3?app_id={APP_ID}\"\n# ----------------------------\n# SIMPLE CANDLE STORAGE\n# ----------------------------\nsymbol_candles = {s: [] for s in SYMBOLS}\nbuffers = {\n    s: {\n        \"open\": None,\n        \"high\": None,",
+        "peekOfCode": "SYMBOLS = [\"R_10\", \"R_25\", \"R_50\", \"R_75\", \"R_100\"]\nURL = f\"wss://ws.binaryws.com/websockets/v3?app_id={APP_ID}\"\n# ----------------------------\n# STORAGE\n# ----------------------------\nsymbol_candles = {s: [] for s in SYMBOLS}\nbuffers = {\n    s: {\n        \"open\": None,\n        \"high\": None,",
         "detail": "src.run_streamer",
         "documentation": {}
     },
@@ -254,7 +254,7 @@
         "kind": 5,
         "importPath": "src.run_streamer",
         "description": "src.run_streamer",
-        "peekOfCode": "URL = f\"wss://ws.binaryws.com/websockets/v3?app_id={APP_ID}\"\n# ----------------------------\n# SIMPLE CANDLE STORAGE\n# ----------------------------\nsymbol_candles = {s: [] for s in SYMBOLS}\nbuffers = {\n    s: {\n        \"open\": None,\n        \"high\": None,\n        \"low\": None,",
+        "peekOfCode": "URL = f\"wss://ws.binaryws.com/websockets/v3?app_id={APP_ID}\"\n# ----------------------------\n# STORAGE\n# ----------------------------\nsymbol_candles = {s: [] for s in SYMBOLS}\nbuffers = {\n    s: {\n        \"open\": None,\n        \"high\": None,\n        \"low\": None,",
         "detail": "src.run_streamer",
         "documentation": {}
     },
@@ -272,7 +272,7 @@
         "kind": 5,
         "importPath": "src.run_streamer",
         "description": "src.run_streamer",
-        "peekOfCode": "buffers = {\n    s: {\n        \"open\": None,\n        \"high\": None,\n        \"low\": None,\n        \"close\": None,\n        \"start_epoch\": None\n    } for s in SYMBOLS\n}\nCANDLE_DURATION = 60  # 1-minute candles",
+        "peekOfCode": "buffers = {\n    s: {\n        \"open\": None,\n        \"high\": None,\n        \"low\": None,\n        \"close\": None,\n        \"start_epoch\": None\n    } for s in SYMBOLS\n}\nCANDLE_DURATION = 60",
         "detail": "src.run_streamer",
         "documentation": {}
     },
@@ -281,7 +281,7 @@
         "kind": 5,
         "importPath": "src.run_streamer",
         "description": "src.run_streamer",
-        "peekOfCode": "CANDLE_DURATION = 60  # 1-minute candles\n# ----------------------------\n# BUILD CANDLES FROM TICKS\n# ----------------------------\ndef update_candle_from_tick(symbol, price, epoch):\n    buf = buffers[symbol]\n    if buf[\"open\"] is None:\n        buf[\"open\"] = buf[\"high\"] = buf[\"low\"] = buf[\"close\"] = price\n        buf[\"start_epoch\"] = epoch\n        return None",
+        "peekOfCode": "CANDLE_DURATION = 60\n# ----------------------------\n# BUILD CANDLES\n# ----------------------------\ndef update_candle_from_tick(symbol, price, epoch):\n    buf = buffers[symbol]\n    if buf[\"open\"] is None:\n        buf[\"open\"] = buf[\"high\"] = buf[\"low\"] = buf[\"close\"] = price\n        buf[\"start_epoch\"] = epoch\n        return None",
         "detail": "src.run_streamer",
         "documentation": {}
     },
